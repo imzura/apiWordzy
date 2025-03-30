@@ -1,6 +1,6 @@
 import express from 'express';
 import 'dotenv/config'
-import dbConnection from '../api wordzy/src/config/database.js'
+import dbConnection from './src/config/database.js'
 import routesTopic from './src/routes/routesTopic.js';
 import routesRole from './src/routes/routesRole.js';
 import routesPermission from './src/routes/routesPermission.js';
