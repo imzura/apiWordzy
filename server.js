@@ -1,5 +1,6 @@
 import express from 'express';
 import 'dotenv/config'
+import cors from 'cors';
 import dbConnection from './src/config/database.js'
 import routesTopic from './src/routes/routesTopic.js';
 import routesRole from './src/routes/routesRole.js';
@@ -16,6 +17,16 @@ export default class Server {
         this.pathPermission = '/api/permission'
         this.pathPrivilege = '/api/privilege'
         this.route()
+    }
+
+    middlewares() {
+        // Configuración específica de CORS
+        const corsOptions = {
+            origin: '*', // Origen permitido TODOS
+            optionsSuccessStatus: 200 // Para asegurar compatibilidad con algunos navegadores
+        };
+        this.app.use(cors(corsOptions)); // Aplicar CORS con las opciones configuradas
+        this.app.use(express.json());
     }
 
     listen() {
