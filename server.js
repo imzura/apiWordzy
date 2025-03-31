@@ -11,6 +11,7 @@ export default class Server {
     constructor() {
         this.app = express()
         this.listen()
+        this.middlewares()
         this.dbConnection()
         this.pathTopic = '/api/topic'
         this.pathRole = '/api/role'
