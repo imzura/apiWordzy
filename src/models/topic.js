@@ -6,6 +6,10 @@ const TopicSchema = new Schema({
         required: [true, 'El nombre es requerido'],
         unique: true
     },
+    description:{
+        type: String,
+        required: [true, 'La descripción es requerida']
+    },
     status:{
         type: Boolean,
         default: true

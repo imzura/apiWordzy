@@ -28,10 +28,10 @@ export async function postTopic(req, res) {
 
 export async function putTopic(req, res) {
     const { id } = req.params; // Obtener el ID desde los parámetros de la URL
-    const { name, status } = req.body; // Obtener los datos a actualizar
+    const { name, status, description } = req.body; // Obtener los datos a actualizar
 
     try {
-        const updatedTopic = await Topic.findByIdAndUpdate( id, { name, status }, { new: true });
+        const updatedTopic = await Topic.findByIdAndUpdate( id, { name, status, description }, { new: true });
 
         if (!updatedTopic) {
             return res.status(404).json({ message: 'Tema no encontrado' });
