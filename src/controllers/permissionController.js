@@ -27,33 +27,31 @@ export async function postPermission(req, res) {
 }
 
 export async function putPermission(req, res) {
-    const { id } = req.params; // Obtener el ID desde los parámetros de la URL
-    const body = req.body; // Datos a actualizar
-
     try {
-        const updatedPermission = await Permission.findByIdAndUpdate(id, body, { new: true });
+    const { module, canView, canCreate, canEdit, canDelete } = req.body;
+    
+    const permission = await Permission.findByIdAndUpdate(
+      req.params.id,
+      { module, canView, canCreate, canEdit, canDelete },
+      { new: true }
+    );
 
-        if (!updatedPermission) {
-            return res.status(404).json({ message: 'Permiso no encontrado' });
-        }
-
-        res.status(200).json({ message: 'Permiso actualizado exitosamente', updatedPermission });
-    } catch (error) {
-        res.status(500).json({ message: 'Error al actualizar el permiso', error });
+    if (!permission) {
+      return res.status(404).json({ message: 'Permiso no encontrado' });
     }
-}
-
+    res.json(permission);
+  } catch (err) {
+    res.status(400).json({ error: err.message });
+  }
+};
 
 export async function deletePermission(req, res) {
-    const { id } = req.params;
-
     try {
-        const deletedPermission = await Permission.findByIdAndDelete(id);
-
+        const deletedPermission = await Permission.findByIdAndDelete(req.params.id);
+        // Verificar si se encontró el permiso
         if (!deletedPermission) {
             return res.status(404).json({ message: 'Permiso no encontrado' });
         }
-
         res.status(200).json({ message: 'Permiso eliminado exitosamente' });
     } catch (error) {
         res.status(500).json({ message: 'Error al eliminar el permiso', error });
