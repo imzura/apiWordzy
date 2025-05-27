@@ -1,16 +1,22 @@
 import { model, Schema } from "mongoose";
 
 const TopicSchema = new Schema({
-    name:{
+    name: {
         type: String,
         required: [true, 'El nombre es requerido'],
-        unique: true
+        unique: true,
+        set: function (value) {
+            return value
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "") // Quita tildes
+                .replace(/\s+/g, " ") // Reemplaza espacios dobles
+                .trim();
+        }
     },
-    description:{
+    description: {
         type: String,
-        required: [true, 'La descripción es requerida']
     },
-    status:{
+    status: {
         type: Boolean,
         default: true
     }
