@@ -1,4 +1,4 @@
-import { model, Schema } from "mongoose";
+import mongoose, { model, Schema, } from "mongoose";
 
 const TopicSchema = new Schema({
     name: {
@@ -22,4 +22,4 @@ const TopicSchema = new Schema({
     }
 })
 
-export default model('Topic', TopicSchema, 'topics')
+export default mongoose.models.Topic || model('Topic', TopicSchema);

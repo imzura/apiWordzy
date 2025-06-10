@@ -1,4 +1,4 @@
-import mongoose from "mongoose"
+import mongoose, { model } from "mongoose"
 
 const questionSchema = new mongoose.Schema({
   tipo: {
@@ -81,6 +81,4 @@ evaluationSchema.pre("findOneAndUpdate", function () {
   this.set({ updatedAt: new Date() })
 })
 
-const Evaluation = mongoose.model("Evaluation", evaluationSchema)
-
-export default Evaluation
+export default mongoose.models.Evaluation || model('Evaluation', evaluationSchema, 'evaluations');
