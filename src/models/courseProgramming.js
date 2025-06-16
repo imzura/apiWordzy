@@ -46,14 +46,8 @@ const LevelSchema = new Schema({
     required: true
   },
   topics: {
-    type: [TopicSchema],
-    validate: {
-      validator: function (topics) {
-        const total = topics.reduce((sum, t) => sum + t.value, 0);
-        return total === 100;
-      },
-      message: 'El total de los valores de los temas debe ser 100%.'
-    }
+    type: [TopicSchema]
+    // 🔴 VALIDACIÓN ELIMINADA (la haces tú en el controlador)
   }
 });
 
@@ -69,6 +63,7 @@ const CourseProgrammingSchema = new Schema({
   },
   endDate: {
     type: Date,
+    default: null,
   },
   status: {
     type: Boolean,
