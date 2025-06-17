@@ -1,11 +1,19 @@
 import { Router } from "express"
-import { getAllApprentices, getApprenticeById, getApprenticeStats } from "../controllers/apprenticeController.js"
+// #inicio modulos dickson
+import { getAllUsers, getUserById, getUserStats } from "../controllers/userController.js"
 
 const routesApprentice = Router()
 
-// Solo rutas de lectura para aprendices
-routesApprentice.get("/", getAllApprentices)
-routesApprentice.get("/stats", getApprenticeStats)
-routesApprentice.get("/:id", getApprenticeById)
+//para filtrar solo aprendices
+const filterApprentices = (req, res, next) => {
+  req.query.tipoUsuario = "aprendiz"
+  next()
+}
+
+// Solo rutas de lectura para aprendices (usando controlador unificado)
+routesApprentice.get("/", filterApprentices, getAllUsers)
+routesApprentice.get("/stats", filterApprentices, getUserStats)
+routesApprentice.get("/:id", getUserById)
+// #fin modulos dickson
 
 export default routesApprentice
