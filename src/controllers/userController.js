@@ -153,15 +153,6 @@ export const createUser = async (req, res) => {
       })
     }
 
-    // Validar que no exista un usuario con el mismo correo
-    const existingEmail = await User.findOne({ correo: userData.correo?.toLowerCase() })
-    if (existingEmail) {
-      console.log(`Ya existe un usuario con correo: ${userData.correo}`)
-      return res.status(400).json({
-        message: "Ya existe un usuario con este correo",
-      })
-    }
-
     // Preparar datos según el tipo de usuario
     const cleanUserData = prepareUserData(userData)
 
@@ -237,20 +228,6 @@ export const updateUser = async (req, res) => {
         console.log(`Ya existe otro usuario con documento: ${updateData.documento}`)
         return res.status(400).json({
           message: "Ya existe otro usuario con este documento",
-        })
-      }
-    }
-
-    // Validar correo único (excluyendo el usuario actual)
-    if (updateData.correo && updateData.correo.toLowerCase() !== currentUser.correo) {
-      const existingEmail = await User.findOne({
-        correo: updateData.correo.toLowerCase(),
-        _id: { $ne: id },
-      })
-      if (existingEmail) {
-        console.log(`Ya existe otro usuario con correo: ${updateData.correo}`)
-        return res.status(400).json({
-          message: "Ya existe otro usuario con este correo",
         })
       }
     }

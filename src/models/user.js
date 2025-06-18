@@ -142,7 +142,6 @@ const userSchema = new mongoose.Schema(
     correo: {
       type: String,
       required: [true, "El correo es obligatorio"],
-      unique: true,
       lowercase: true,
       trim: true,
       match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, "Email inválido"],
@@ -219,7 +218,6 @@ const userSchema = new mongoose.Schema(
 // Índices compuestos para optimizar consultas
 userSchema.index({ tipoUsuario: 1, estado: 1 })
 userSchema.index({ tipoUsuario: 1, documento: 1 })
-userSchema.index({ tipoUsuario: 1, correo: 1 })
 userSchema.index({ tipoUsuario: 1, ficha: 1 })
 userSchema.index({ tipoUsuario: 1, programa: 1 })
 
