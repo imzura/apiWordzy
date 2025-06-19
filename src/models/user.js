@@ -1,7 +1,7 @@
 // #inicio modulos dickson
 import mongoose from "mongoose"
 
-// Esquema para fichas de instructores
+// Esquema para fichas de instruc
 const fichaInstructorSchema = new mongoose.Schema(
   {
     numero: {
