@@ -1,7 +1,7 @@
 // #inicio modulos dickson
 import mongoose from "mongoose"
 
-// Esquema para fichas de instruc
+// Esquema para fichas de instructores
 const fichaInstructorSchema = new mongoose.Schema(
   {
     numero: {
@@ -146,6 +146,12 @@ const userSchema = new mongoose.Schema(
       trim: true,
       match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, "Email inválido"],
     },
+    // NUEVO CAMPO: Contraseña para ambos tipos de usuario
+    contraseña: {
+      type: String,
+      required: [true, "La contraseña es obligatoria"],
+      minlength: [1, "La contraseña debe tener al menos 1 carácter"],
+    },
 
     // Campos específicos para APRENDICES
     ficha: [
@@ -183,6 +189,16 @@ const userSchema = new mongoose.Schema(
         { nivel: 3, porcentaje: 0 },
       ],
     },
+    // NUEVO CAMPO: Puntos para aprendices
+    puntos: {
+      type: Number,
+      default: 0,
+      min: [0, "Los puntos no pueden ser negativos"],
+      validate: {
+        validator: Number.isInteger,
+        message: "Los puntos deben ser un número entero",
+      },
+    },
 
     // Campos específicos para INSTRUCTORES
     fichas: {
@@ -208,6 +224,7 @@ const userSchema = new mongoose.Schema(
           delete ret.programa
           delete ret.progresoActual
           delete ret.progresoNiveles
+          delete ret.puntos
         }
         return ret
       },
@@ -231,6 +248,7 @@ userSchema.pre("save", function (next) {
     this.programa = undefined
     this.progresoActual = undefined
     this.progresoNiveles = undefined
+    this.puntos = undefined
   }
   next()
 })
@@ -247,6 +265,7 @@ userSchema.methods.toCleanJSON = function () {
     delete obj.programa
     delete obj.progresoActual
     delete obj.progresoNiveles
+    delete obj.puntos
   }
 
   return obj

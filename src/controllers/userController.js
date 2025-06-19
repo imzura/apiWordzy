@@ -29,6 +29,13 @@ const validateApprenticeData = (userData) => {
     ) {
       errors.push("Los aprendices deben tener progreso para los 3 niveles")
     }
+
+    // Validar puntos (opcional, pero si se proporciona debe ser válido)
+    if (userData.puntos !== undefined) {
+      if (!Number.isInteger(userData.puntos) || userData.puntos < 0) {
+        errors.push("Los puntos deben ser un número entero mayor o igual a 0")
+      }
+    }
   }
 
   return errors
@@ -86,6 +93,7 @@ export const getAllUsers = async (req, res) => {
         delete userObj.programa
         delete userObj.progresoActual
         delete userObj.progresoNiveles
+        delete userObj.puntos
       }
       return userObj
     })
@@ -141,6 +149,13 @@ export const createUser = async (req, res) => {
     if (!userData.tipoUsuario || !["aprendiz", "instructor"].includes(userData.tipoUsuario)) {
       return res.status(400).json({
         message: "Tipo de usuario requerido: aprendiz o instructor",
+      })
+    }
+
+    // Validar contraseña
+    if (!userData.contraseña || userData.contraseña.trim().length === 0) {
+      return res.status(400).json({
+        message: "La contraseña es obligatoria",
       })
     }
 
@@ -246,6 +261,20 @@ export const updateUser = async (req, res) => {
       if (currentUser.tipoUsuario === "instructor" && !estadosInstructor.includes(updateData.estado)) {
         return res.status(400).json({
           message: "Estado no válido para instructores. Estados permitidos: " + estadosInstructor.join(", "),
+        })
+      }
+    }
+
+    // Validar puntos si se están actualizando
+    if (updateData.puntos !== undefined) {
+      if (currentUser.tipoUsuario !== "aprendiz") {
+        return res.status(400).json({
+          message: "Solo los aprendices pueden tener puntos",
+        })
+      }
+      if (!Number.isInteger(updateData.puntos) || updateData.puntos < 0) {
+        return res.status(400).json({
+          message: "Los puntos deben ser un número entero mayor o igual a 0",
         })
       }
     }
@@ -388,6 +417,64 @@ export const updateProgress = async (req, res) => {
 
     res.status(500).json({
       message: "Error al actualizar progreso",
+      error: error.message,
+    })
+  }
+}
+
+// NUEVA FUNCIÓN: Actualizar puntos de un aprendiz
+export const updatePoints = async (req, res) => {
+  try {
+    console.log(`=== ACTUALIZANDO PUNTOS DE APRENDIZ CON ID: ${req.params.id} ===`)
+    console.log("Datos de puntos:", req.body)
+
+    const { id } = req.params
+    const { puntos, operacion = "set" } = req.body // operacion puede ser 'set', 'add', 'subtract'
+
+    // Verificar que sea un aprendiz
+    const user = await User.findById(id)
+    if (!user) {
+      console.log("Usuario no encontrado")
+      return res.status(404).json({ message: "Usuario no encontrado" })
+    }
+
+    if (user.tipoUsuario !== "aprendiz") {
+      return res.status(400).json({
+        message: "Solo se pueden actualizar los puntos de aprendices",
+      })
+    }
+
+    // Validar puntos
+    if (!Number.isInteger(puntos) || puntos < 0) {
+      return res.status(400).json({
+        message: "Los puntos deben ser un número entero mayor o igual a 0",
+      })
+    }
+
+    let nuevosPuntos = puntos
+
+    // Calcular nuevos puntos según la operación
+    if (operacion === "add") {
+      nuevosPuntos = (user.puntos || 0) + puntos
+    } else if (operacion === "subtract") {
+      nuevosPuntos = Math.max(0, (user.puntos || 0) - puntos) // No permitir puntos negativos
+    }
+    // Si operacion === "set", usar directamente los puntos enviados
+
+    const updatedUser = await User.findByIdAndUpdate(id, { puntos: nuevosPuntos }, { new: true, runValidators: true })
+
+    console.log(`Puntos actualizados exitosamente para: ${updatedUser.nombre} ${updatedUser.apellido}`)
+    console.log(`Puntos anteriores: ${user.puntos || 0}, Nuevos puntos: ${nuevosPuntos}`)
+    res.status(200).json(updatedUser.toCleanJSON())
+  } catch (error) {
+    console.error("Error al actualizar puntos:", error)
+
+    if (error.name === "CastError") {
+      return res.status(400).json({ message: "ID de usuario inválido" })
+    }
+
+    res.status(500).json({
+      message: "Error al actualizar puntos",
       error: error.message,
     })
   }
@@ -616,6 +703,9 @@ export const getUserStats = async (req, res) => {
             $sum: { $cond: [{ $eq: ["$estado", "Graduado"] }, 1, 0] },
           },
           progresoPromedio: { $avg: "$progresoActual" },
+          puntosPromedio: { $avg: "$puntos" },
+          puntosTotales: { $sum: "$puntos" },
+          puntosMaximos: { $max: "$puntos" },
         },
       },
     ])
@@ -663,6 +753,7 @@ const prepareUserData = (userData) => {
     estado: userData.estado,
     telefono: userData.telefono?.trim() || "",
     correo: userData.correo?.toLowerCase().trim(),
+    contraseña: userData.contraseña, // Nueva contraseña
   }
 
   if (userData.tipoUsuario === "aprendiz") {
@@ -677,6 +768,7 @@ const prepareUserData = (userData) => {
         { nivel: 2, porcentaje: 0 },
         { nivel: 3, porcentaje: 0 },
       ],
+      puntos: Number.parseInt(userData.puntos) || 0, // Nuevos puntos
     }
   } else if (userData.tipoUsuario === "instructor") {
     return {
