@@ -10,6 +10,9 @@ import routesProgram from "./routesProgram.js"
 import routesSupportMaterial from "./supportMaterialRoutes.js"
 import routesUpload from "./uploadRoutes.js"
 import routesUser from "./routeUser.js"
+import programRoutes from "./routesProgram.js" // ✅ AGREGAR ESTA LÍNEA
+import courseRoutes from "./routesCourse.js"
+import scaleRoutes from "./scaleRoutes.js"
 
 const router = Router()
 
@@ -21,9 +24,11 @@ router.use("/instructor", routesInstructor)
 router.use("/apprentice", routesApprentice)
 router.use("/course-programming", routesCoursePrograming)
 router.use("/program", routesProgram)
+router.use("/program", programRoutes) // ✅ AGREGAR ESTA LÍNEA
 router.use("/support-materials", routesSupportMaterial)
 router.use("/upload", routesUpload)
 router.use("/user", routesUser)
-
+router.use("/course", courseRoutes)
+router.use("/scales", scaleRoutes)
 
 export default router
