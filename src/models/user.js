@@ -146,11 +146,16 @@ const userSchema = new mongoose.Schema(
       trim: true,
       match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, "Email inválido"],
     },
-    // NUEVO CAMPO: Contraseña para ambos tipos de usuario
     contraseña: {
       type: String,
       required: [true, "La contraseña es obligatoria"],
       minlength: [1, "La contraseña debe tener al menos 1 carácter"],
+    },
+    // NUEVO CAMPO: Rol del usuario
+    role: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Role",
+      required: [true, "El rol es obligatorio"],
     },
 
     // Campos específicos para APRENDICES
@@ -189,7 +194,6 @@ const userSchema = new mongoose.Schema(
         { nivel: 3, porcentaje: 0 },
       ],
     },
-    // NUEVO CAMPO: Puntos para aprendices
     puntos: {
       type: Number,
       default: 0,
@@ -237,6 +241,8 @@ userSchema.index({ tipoUsuario: 1, estado: 1 })
 userSchema.index({ tipoUsuario: 1, documento: 1 })
 userSchema.index({ tipoUsuario: 1, ficha: 1 })
 userSchema.index({ tipoUsuario: 1, programa: 1 })
+userSchema.index({ role: 1 })
+userSchema.index({ tipoUsuario: 1, role: 1 })
 
 // Middleware pre-save para limpiar campos innecesarios
 userSchema.pre("save", function (next) {

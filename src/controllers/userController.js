@@ -1,5 +1,41 @@
 // #inicio modulos dickson
 import User from "../models/user.js"
+import Role from "../models/role.js"
+
+// Función helper para buscar rol por nombre
+const findRoleByName = async (roleName) => {
+  try {
+    const role = await Role.findOne({
+      name: roleName,
+      status: true,
+    })
+    return role
+  } catch (error) {
+    console.error(`Error buscando rol ${roleName}:`, error)
+    return null
+  }
+}
+
+// Función para validar coherencia entre tipoUsuario y rol
+const validateUserRole = async (tipoUsuario, roleId) => {
+  try {
+    const role = await Role.findById(roleId)
+    if (!role) return false
+
+    // Validar que el rol coincida con el tipo de usuario
+    if (tipoUsuario === "aprendiz" && role.name !== "Aprendiz") {
+      return false
+    }
+    if (tipoUsuario === "instructor" && role.name !== "Instructor") {
+      return false
+    }
+
+    return true
+  } catch (error) {
+    console.error("Error validando rol de usuario:", error)
+    return false
+  }
+}
 
 // Función para validar datos específicos de aprendices
 const validateApprenticeData = (userData) => {
@@ -80,7 +116,7 @@ export const getAllUsers = async (req, res) => {
       console.log(`Filtrando por nivel: ${nivel}`)
     }
 
-    const users = await User.find(filter).sort({ createdAt: -1 })
+    const users = await User.find(filter).populate("role", "name description status").sort({ createdAt: -1 })
 
     // Limpiar respuesta según el tipo de usuario
     const cleanUsers = users.map((user) => {
@@ -114,7 +150,7 @@ export const getUserById = async (req, res) => {
   try {
     console.log(`=== OBTENIENDO USUARIO CON ID: ${req.params.id} ===`)
 
-    const user = await User.findById(req.params.id)
+    const user = await User.findById(req.params.id).populate("role", "name description status")
 
     if (!user) {
       console.log("Usuario no encontrado")
@@ -152,10 +188,41 @@ export const createUser = async (req, res) => {
       })
     }
 
-    // Validar contraseña
+    // Validar contraseña (usar documento como default si no se proporciona)
+    if (!userData.contraseña && userData.documento) {
+      userData.contraseña = userData.documento
+    }
+
     if (!userData.contraseña || userData.contraseña.trim().length === 0) {
       return res.status(400).json({
         message: "La contraseña es obligatoria",
+      })
+    }
+
+    // Validar que el rol exista
+    if (userData.role) {
+      const existingRole = await Role.findById(userData.role)
+      if (!existingRole) {
+        return res.status(400).json({
+          message: "El rol especificado no existe",
+        })
+      }
+      if (!existingRole.status) {
+        return res.status(400).json({
+          message: "El rol especificado está inactivo",
+        })
+      }
+
+      // Validar coherencia entre tipoUsuario y rol
+      const isValidRole = await validateUserRole(userData.tipoUsuario, userData.role)
+      if (!isValidRole) {
+        return res.status(400).json({
+          message: `El rol no es válido para un ${userData.tipoUsuario}`,
+        })
+      }
+    } else {
+      return res.status(400).json({
+        message: "El rol es obligatorio",
       })
     }
 
@@ -182,6 +249,9 @@ export const createUser = async (req, res) => {
 
     const user = new User(cleanUserData)
     const savedUser = await user.save()
+
+    // Poblar el rol en la respuesta
+    await savedUser.populate("role", "name description status")
 
     console.log(`Usuario creado exitosamente: ${savedUser.nombre} ${savedUser.apellido} (${savedUser.tipoUsuario})`)
     res.status(201).json(savedUser.toCleanJSON())
@@ -220,7 +290,7 @@ export const updateUser = async (req, res) => {
     const updateData = req.body
 
     // Obtener usuario actual para verificar tipo
-    const currentUser = await User.findById(id)
+    const currentUser = await User.findById(id).populate("role")
     if (!currentUser) {
       console.log("Usuario no encontrado para actualizar")
       return res.status(404).json({ message: "Usuario no encontrado" })
@@ -243,6 +313,29 @@ export const updateUser = async (req, res) => {
         console.log(`Ya existe otro usuario con documento: ${updateData.documento}`)
         return res.status(400).json({
           message: "Ya existe otro usuario con este documento",
+        })
+      }
+    }
+
+    // Validar rol si se está actualizando
+    if (updateData.role) {
+      const existingRole = await Role.findById(updateData.role)
+      if (!existingRole) {
+        return res.status(400).json({
+          message: "El rol especificado no existe",
+        })
+      }
+      if (!existingRole.status) {
+        return res.status(400).json({
+          message: "El rol especificado está inactivo",
+        })
+      }
+
+      // Validar coherencia entre tipoUsuario y rol
+      const isValidRole = await validateUserRole(currentUser.tipoUsuario, updateData.role)
+      if (!isValidRole) {
+        return res.status(400).json({
+          message: `El rol no es válido para un ${currentUser.tipoUsuario}`,
         })
       }
     }
@@ -294,7 +387,10 @@ export const updateUser = async (req, res) => {
       })
     }
 
-    const user = await User.findByIdAndUpdate(id, cleanUpdateData, { new: true, runValidators: true })
+    const user = await User.findByIdAndUpdate(id, cleanUpdateData, { new: true, runValidators: true }).populate(
+      "role",
+      "name description status",
+    )
 
     console.log(`Usuario actualizado exitosamente: ${user.nombre} ${user.apellido}`)
     res.status(200).json(user.toCleanJSON())
@@ -365,7 +461,7 @@ export const updateProgress = async (req, res) => {
     }
 
     // Verificar que sea un aprendiz
-    const user = await User.findById(id)
+    const user = await User.findById(id).populate("role", "name description status")
     if (!user) {
       console.log("Usuario no encontrado")
       return res.status(404).json({ message: "Usuario no encontrado" })
@@ -404,7 +500,7 @@ export const updateProgress = async (req, res) => {
         progresoActual: progresoGeneral,
       },
       { new: true, runValidators: true },
-    )
+    ).populate("role", "name description status")
 
     console.log(`Progreso actualizado exitosamente para: ${updatedUser.nombre} ${updatedUser.apellido}`)
     res.status(200).json(updatedUser.toCleanJSON())
@@ -422,17 +518,17 @@ export const updateProgress = async (req, res) => {
   }
 }
 
-// NUEVA FUNCIÓN: Actualizar puntos de un aprendiz
+// Actualizar puntos de un aprendiz
 export const updatePoints = async (req, res) => {
   try {
     console.log(`=== ACTUALIZANDO PUNTOS DE APRENDIZ CON ID: ${req.params.id} ===`)
     console.log("Datos de puntos:", req.body)
 
     const { id } = req.params
-    const { puntos, operacion = "set" } = req.body // operacion puede ser 'set', 'add', 'subtract'
+    const { puntos, operacion = "set" } = req.body
 
     // Verificar que sea un aprendiz
-    const user = await User.findById(id)
+    const user = await User.findById(id).populate("role", "name description status")
     if (!user) {
       console.log("Usuario no encontrado")
       return res.status(404).json({ message: "Usuario no encontrado" })
@@ -457,11 +553,14 @@ export const updatePoints = async (req, res) => {
     if (operacion === "add") {
       nuevosPuntos = (user.puntos || 0) + puntos
     } else if (operacion === "subtract") {
-      nuevosPuntos = Math.max(0, (user.puntos || 0) - puntos) // No permitir puntos negativos
+      nuevosPuntos = Math.max(0, (user.puntos || 0) - puntos)
     }
-    // Si operacion === "set", usar directamente los puntos enviados
 
-    const updatedUser = await User.findByIdAndUpdate(id, { puntos: nuevosPuntos }, { new: true, runValidators: true })
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { puntos: nuevosPuntos },
+      { new: true, runValidators: true },
+    ).populate("role", "name description status")
 
     console.log(`Puntos actualizados exitosamente para: ${updatedUser.nombre} ${updatedUser.apellido}`)
     console.log(`Puntos anteriores: ${user.puntos || 0}, Nuevos puntos: ${nuevosPuntos}`)
@@ -496,7 +595,7 @@ export const addFichaToInstructor = async (req, res) => {
       })
     }
 
-    const user = await User.findById(id)
+    const user = await User.findById(id).populate("role", "name description status")
     if (!user) {
       console.log("Usuario no encontrado")
       return res.status(404).json({ message: "Usuario no encontrado" })
@@ -524,6 +623,8 @@ export const addFichaToInstructor = async (req, res) => {
     })
 
     const updatedUser = await user.save()
+    await updatedUser.populate("role", "name description status")
+
     console.log(`Ficha añadida exitosamente al instructor: ${user.nombre} ${user.apellido}`)
     res.status(200).json(updatedUser.toCleanJSON())
   } catch (error) {
@@ -542,7 +643,7 @@ export const updateFichaFromInstructor = async (req, res) => {
     const { id, fichaId } = req.params
     const updateData = req.body
 
-    const user = await User.findById(id)
+    const user = await User.findById(id).populate("role", "name description status")
     if (!user) {
       console.log("Usuario no encontrado")
       return res.status(404).json({ message: "Usuario no encontrado" })
@@ -566,6 +667,8 @@ export const updateFichaFromInstructor = async (req, res) => {
     })
 
     const updatedUser = await user.save()
+    await updatedUser.populate("role", "name description status")
+
     console.log(`Ficha actualizada exitosamente`)
     res.status(200).json(updatedUser.toCleanJSON())
   } catch (error) {
@@ -582,7 +685,7 @@ export const removeFichaFromInstructor = async (req, res) => {
 
     const { id, fichaId } = req.params
 
-    const user = await User.findById(id)
+    const user = await User.findById(id).populate("role", "name description status")
     if (!user) {
       console.log("Usuario no encontrado")
       return res.status(404).json({ message: "Usuario no encontrado" })
@@ -601,6 +704,7 @@ export const removeFichaFromInstructor = async (req, res) => {
     // Eliminar la ficha
     user.fichas.pull(fichaId)
     const updatedUser = await user.save()
+    await updatedUser.populate("role", "name description status")
 
     console.log(`Ficha eliminada exitosamente`)
     res.status(200).json({ message: "Ficha eliminada exitosamente", user: updatedUser.toCleanJSON() })
@@ -753,7 +857,8 @@ const prepareUserData = (userData) => {
     estado: userData.estado,
     telefono: userData.telefono?.trim() || "",
     correo: userData.correo?.toLowerCase().trim(),
-    contraseña: userData.contraseña, // Nueva contraseña
+    contraseña: userData.contraseña,
+    role: userData.role, // NUEVO CAMPO
   }
 
   if (userData.tipoUsuario === "aprendiz") {
@@ -768,7 +873,7 @@ const prepareUserData = (userData) => {
         { nivel: 2, porcentaje: 0 },
         { nivel: 3, porcentaje: 0 },
       ],
-      puntos: Number.parseInt(userData.puntos) || 0, // Nuevos puntos
+      puntos: Number.parseInt(userData.puntos) || 0,
     }
   } else if (userData.tipoUsuario === "instructor") {
     return {
