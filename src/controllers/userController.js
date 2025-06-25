@@ -29,6 +29,10 @@ const validateUserRole = async (tipoUsuario, roleId) => {
     if (tipoUsuario === "instructor" && role.name !== "Instructor") {
       return false
     }
+    if (tipoUsuario === "administrador" && role.name !== "Administrador") {
+      // NUEVO: Validar rol de administrador
+      return false
+    }
 
     return true
   } catch (error) {
@@ -87,7 +91,8 @@ export const getAllUsers = async (req, res) => {
     // Construir filtro dinámico
     const filter = {}
 
-    if (tipoUsuario && ["aprendiz", "instructor"].includes(tipoUsuario)) {
+    if (tipoUsuario && ["aprendiz", "instructor", "administrador"].includes(tipoUsuario)) {
+      // AÑADIDO: administrador
       filter.tipoUsuario = tipoUsuario
       console.log(`Filtrando por tipo de usuario: ${tipoUsuario}`)
     }
@@ -130,6 +135,15 @@ export const getAllUsers = async (req, res) => {
         delete userObj.progresoActual
         delete userObj.progresoNiveles
         delete userObj.puntos
+      } else if (userObj.tipoUsuario === "administrador") {
+        // NUEVO: Limpiar para administrador
+        delete userObj.ficha
+        delete userObj.nivel
+        delete userObj.programa
+        delete userObj.progresoActual
+        delete userObj.progresoNiveles
+        delete userObj.puntos
+        delete userObj.fichas
       }
       return userObj
     })
@@ -182,9 +196,10 @@ export const createUser = async (req, res) => {
     const userData = req.body
 
     // Validar tipo de usuario
-    if (!userData.tipoUsuario || !["aprendiz", "instructor"].includes(userData.tipoUsuario)) {
+    if (!userData.tipoUsuario || !["aprendiz", "instructor", "administrador"].includes(userData.tipoUsuario)) {
+      // AÑADIDO: administrador
       return res.status(400).json({
-        message: "Tipo de usuario requerido: aprendiz o instructor",
+        message: "Tipo de usuario requerido: aprendiz, instructor o administrador",
       })
     }
 
@@ -238,13 +253,15 @@ export const createUser = async (req, res) => {
     // Preparar datos según el tipo de usuario
     const cleanUserData = prepareUserData(userData)
 
-    // Validar datos específicos de aprendices
-    const apprenticeValidationErrors = validateApprenticeData(cleanUserData)
-    if (apprenticeValidationErrors.length > 0) {
-      return res.status(400).json({
-        message: "Datos de aprendiz inválidos",
-        errors: apprenticeValidationErrors,
-      })
+    // Validar datos específicos de aprendices (solo si es aprendiz)
+    if (cleanUserData.tipoUsuario === "aprendiz") {
+      const apprenticeValidationErrors = validateApprenticeData(cleanUserData)
+      if (apprenticeValidationErrors.length > 0) {
+        return res.status(400).json({
+          message: "Datos de aprendiz inválidos",
+          errors: apprenticeValidationErrors,
+        })
+      }
     }
 
     const user = new User(cleanUserData)
@@ -344,6 +361,7 @@ export const updateUser = async (req, res) => {
     if (updateData.estado) {
       const estadosAprendiz = ["En formación", "Condicionado", "Retirado", "Graduado"]
       const estadosInstructor = ["Activo", "Inactivo"]
+      const estadosAdministrador = ["Activo", "Inactivo"] // NUEVO: Estados para administrador
 
       if (currentUser.tipoUsuario === "aprendiz" && !estadosAprendiz.includes(updateData.estado)) {
         return res.status(400).json({
@@ -356,9 +374,16 @@ export const updateUser = async (req, res) => {
           message: "Estado no válido para instructores. Estados permitidos: " + estadosInstructor.join(", "),
         })
       }
+
+      if (currentUser.tipoUsuario === "administrador" && !estadosAdministrador.includes(updateData.estado)) {
+        // NUEVO: Validar estado para administrador
+        return res.status(400).json({
+          message: "Estado no válido para administradores. Estados permitidos: " + estadosAdministrador.join(", "),
+        })
+      }
     }
 
-    // Validar puntos si se están actualizando
+    // Validar puntos si se están actualizando (solo para aprendices)
     if (updateData.puntos !== undefined) {
       if (currentUser.tipoUsuario !== "aprendiz") {
         return res.status(400).json({
@@ -378,13 +403,15 @@ export const updateUser = async (req, res) => {
       tipoUsuario: currentUser.tipoUsuario,
     })
 
-    // Validar datos específicos de aprendices
-    const apprenticeValidationErrors = validateApprenticeData(cleanUpdateData)
-    if (apprenticeValidationErrors.length > 0) {
-      return res.status(400).json({
-        message: "Datos de aprendiz inválidos",
-        errors: apprenticeValidationErrors,
-      })
+    // Validar datos específicos de aprendices (solo si es aprendiz)
+    if (currentUser.tipoUsuario === "aprendiz") {
+      const apprenticeValidationErrors = validateApprenticeData(cleanUpdateData)
+      if (apprenticeValidationErrors.length > 0) {
+        return res.status(400).json({
+          message: "Datos de aprendiz inválidos",
+          errors: apprenticeValidationErrors,
+        })
+      }
     }
 
     const user = await User.findByIdAndUpdate(id, cleanUpdateData, { new: true, runValidators: true }).populate(
@@ -776,6 +803,7 @@ export const getUserStats = async (req, res) => {
                   $or: [
                     { $and: [{ $eq: ["$tipoUsuario", "aprendiz"] }, { $eq: ["$estado", "En formación"] }] },
                     { $and: [{ $eq: ["$tipoUsuario", "instructor"] }, { $eq: ["$estado", "Activo"] }] },
+                    { $and: [{ $eq: ["$tipoUsuario", "administrador"] }, { $eq: ["$estado", "Activo"] }] }, // NUEVO: Administrador activo
                   ],
                 },
                 1,
@@ -832,10 +860,28 @@ export const getUserStats = async (req, res) => {
       },
     ])
 
+    // NUEVO: Estadísticas específicas de administradores
+    const adminStats = await User.aggregate([
+      { $match: { tipoUsuario: "administrador" } },
+      {
+        $group: {
+          _id: null,
+          totalAdministradores: { $sum: 1 },
+          administradoresActivos: {
+            $sum: { $cond: [{ $eq: ["$estado", "Activo"] }, 1, 0] },
+          },
+          administradoresInactivos: {
+            $sum: { $cond: [{ $eq: ["$estado", "Inactivo"] }, 1, 0] },
+          },
+        },
+      },
+    ])
+
     const result = {
       general: generalStats,
       aprendices: apprenticeStats[0] || {},
       instructores: instructorStats[0] || {},
+      administradores: adminStats[0] || {}, // NUEVO: Agregar estadísticas de administrador
     }
 
     console.log("Estadísticas calculadas:", result)
@@ -858,7 +904,7 @@ const prepareUserData = (userData) => {
     telefono: userData.telefono?.trim() || "",
     correo: userData.correo?.toLowerCase().trim(),
     contraseña: userData.contraseña,
-    role: userData.role, // NUEVO CAMPO
+    role: userData.role,
   }
 
   if (userData.tipoUsuario === "aprendiz") {
@@ -879,6 +925,12 @@ const prepareUserData = (userData) => {
     return {
       ...baseData,
       fichas: userData.fichas || [],
+    }
+  } else if (userData.tipoUsuario === "administrador") {
+    // NUEVO: Datos para administrador
+    return {
+      ...baseData,
+      // Los administradores no tienen campos específicos de aprendiz o instructor
     }
   }
 

@@ -89,8 +89,8 @@ const userSchema = new mongoose.Schema(
       type: String,
       required: [true, "El tipo de usuario es obligatorio"],
       enum: {
-        values: ["aprendiz", "instructor"],
-        message: 'El tipo de usuario debe ser "aprendiz" o "instructor"',
+        values: ["aprendiz", "instructor", "administrador"], // AÑADIDO: administrador
+        message: 'El tipo de usuario debe ser "aprendiz", "instructor" o "administrador"',
       },
       index: true,
     },
@@ -151,7 +151,6 @@ const userSchema = new mongoose.Schema(
       required: [true, "La contraseña es obligatoria"],
       minlength: [1, "La contraseña debe tener al menos 1 carácter"],
     },
-    // NUEVO CAMPO: Rol del usuario
     role: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Role",
@@ -229,6 +228,15 @@ const userSchema = new mongoose.Schema(
           delete ret.progresoActual
           delete ret.progresoNiveles
           delete ret.puntos
+        } else if (ret.tipoUsuario === "administrador") {
+          // NUEVO: Limpiar campos para administrador
+          delete ret.ficha
+          delete ret.nivel
+          delete ret.programa
+          delete ret.progresoActual
+          delete ret.progresoNiveles
+          delete ret.puntos
+          delete ret.fichas
         }
         return ret
       },
@@ -255,6 +263,15 @@ userSchema.pre("save", function (next) {
     this.progresoActual = undefined
     this.progresoNiveles = undefined
     this.puntos = undefined
+  } else if (this.tipoUsuario === "administrador") {
+    // NUEVO: Limpiar campos para administrador
+    this.ficha = undefined
+    this.nivel = undefined
+    this.programa = undefined
+    this.progresoActual = undefined
+    this.progresoNiveles = undefined
+    this.puntos = undefined
+    this.fichas = undefined
   }
   next()
 })
@@ -272,6 +289,15 @@ userSchema.methods.toCleanJSON = function () {
     delete obj.progresoActual
     delete obj.progresoNiveles
     delete obj.puntos
+  } else if (this.tipoUsuario === "administrador") {
+    // NUEVO: Limpiar campos para administrador
+    delete obj.ficha
+    delete obj.nivel
+    delete obj.programa
+    delete obj.progresoActual
+    delete obj.progresoNiveles
+    delete obj.puntos
+    delete obj.fichas
   }
 
   return obj
