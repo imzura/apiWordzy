@@ -14,11 +14,11 @@ import authMiddleware from "../middlewares/authMiddleware.js"
 const router = Router()
 
 // Rutas para cursos locales
-router.get("/", authMiddleware, getCourses)
-router.get("/:id", authMiddleware, getCourseById)
-router.post("/", authMiddleware, createCourse)
-router.put("/:id", authMiddleware, updateCourse)
-router.delete("/:id", authMiddleware, deleteCourse)
+router.get("/", getCourses)
+router.get("/:id", getCourseById)
+router.post("/", createCourse)
+router.put("/:id", updateCourse)
+router.delete("/:id", deleteCourse)
 
 // Rutas para API externa
 router.get("/external/courses", authMiddleware, getExternalCourses)

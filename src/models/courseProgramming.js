@@ -47,7 +47,6 @@ const LevelSchema = new Schema({
   },
   topics: {
     type: [TopicSchema]
-    // 🔴 VALIDACIÓN ELIMINADA (la haces tú en el controlador)
   }
 });
 

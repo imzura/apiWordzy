@@ -6,7 +6,6 @@ import routesEvaluation from "./routeEvaluation.js"
 import routesInstructor from "./routeInstructor.js"
 import routesApprentice from "./routeApprentice.js"
 import routesCoursePrograming from "./routesCourseProgramming.js"
-import routesProgram from "./routesProgram.js"
 import routesSupportMaterial from "./supportMaterialRoutes.js"
 import routesUpload from "./uploadRoutes.js"
 import routesUser from "./routeUser.js"
@@ -23,7 +22,6 @@ router.use("/evaluation", routesEvaluation)
 router.use("/instructor", routesInstructor)
 router.use("/apprentice", routesApprentice)
 router.use("/course-programming", routesCoursePrograming)
-router.use("/program", routesProgram)
 router.use("/program", programRoutes) // ✅ AGREGAR ESTA LÍNEA
 router.use("/support-materials", routesSupportMaterial)
 router.use("/upload", routesUpload)
