@@ -97,11 +97,11 @@ import authMiddleware from "../middlewares/authMiddleware.js"
 const router = Router()
 
 // Rutas CRUD básicas con middleware de API key
-router.get("/", authMiddleware, getProgram)
-router.get("/:id", authMiddleware, getProgramById)
-router.post("/", authMiddleware, createProgram)
-router.put("/:id", authMiddleware, updateProgram)
-router.delete("/:id", authMiddleware, deleteProgram)
+router.get("/", getProgram)
+router.get("/:id", getProgramById)
+router.post("/", createProgram)
+router.put("/:id", updateProgram)
+router.delete("/:id", deleteProgram)
 
 // Rutas para API externa
 router.get("/external/programs", authMiddleware, getExternalPrograms)
