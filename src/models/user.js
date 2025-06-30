@@ -1,66 +1,5 @@
 // #inicio modulos dickson
 import mongoose from "mongoose"
-
-// Esquema para fichas de instructores
-const fichaInstructorSchema = new mongoose.Schema(
-  {
-    numero: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    nivel: {
-      type: Number,
-      required: true,
-      min: 1,
-      max: 6,
-    },
-    programa: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    fechaInicio: {
-      type: String,
-      required: true,
-    },
-    fechaFin: {
-      type: String,
-      required: true,
-    },
-    estudiantes: [
-      {
-        nombre: {
-          type: String,
-          required: true,
-          trim: true,
-        },
-        apellido: {
-          type: String,
-          required: true,
-          trim: true,
-        },
-        documento: {
-          type: String,
-          required: true,
-          trim: true,
-        },
-        tipoDocumento: {
-          type: String,
-          required: true,
-          enum: ["CC", "TI", "PPT", "PEP"],
-        },
-        estado: {
-          type: String,
-          enum: ["En formación", "Condicionado", "Retirado", "Graduado"],
-          default: "En formación",
-        },
-      },
-    ],
-  },
-  { _id: false },
-)
-
 // Esquema para progreso de niveles de aprendices
 const progresoNivelSchema = new mongoose.Schema(
   {
@@ -205,12 +144,30 @@ const userSchema = new mongoose.Schema(
 
     // Campos específicos para INSTRUCTORES
     fichas: {
-      type: [fichaInstructorSchema],
+      type: [
+        {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "Course",
+        },
+      ],
       default: function () {
         if (this.tipoUsuario === "instructor") {
           return []
         }
         return undefined
+      },
+      validate: {
+        validator: function (fichas) {
+          // Solo validar si es instructor
+          if (this.tipoUsuario !== "instructor") return true
+
+          // Permitir array vacío
+          if (!fichas || fichas.length === 0) return true
+
+          // Validar que todos sean ObjectIds válidos
+          return fichas.every((ficha) => mongoose.Types.ObjectId.isValid(ficha))
+        },
+        message: "Todas las fichas deben ser IDs válidos de cursos",
       },
     },
   },
@@ -251,6 +208,7 @@ userSchema.index({ tipoUsuario: 1, ficha: 1 })
 userSchema.index({ tipoUsuario: 1, programa: 1 })
 userSchema.index({ role: 1 })
 userSchema.index({ tipoUsuario: 1, role: 1 })
+userSchema.index({ fichas: 1 }) // Nuevo índice para el campo fichas
 
 // Middleware pre-save para limpiar campos innecesarios
 userSchema.pre("save", function (next) {
@@ -274,6 +232,28 @@ userSchema.pre("save", function (next) {
     this.fichas = undefined
   }
   next()
+})
+
+// En el modelo user.js, agregar middleware pre para populate
+userSchema.pre(["find", "findOne", "findOneAndUpdate"], function () {
+  // Solo poblar fichas para instructores o si no se especifica tipoUsuario
+  if (this.getQuery().tipoUsuario === "instructor" || !this.getQuery().tipoUsuario) {
+    this.populate({
+      path: "fichas",
+      select:
+        "code area fk_programs course_status offer_type start_date end_date status fk_coordination fk_itinerary quarter",
+      match: { status: true }, // Solo fichas activas
+    })
+  }
+})
+
+// Middleware para findById
+userSchema.pre("findById", function () {
+  this.populate({
+    path: "fichas",
+    select:
+      "code area fk_programs course_status offer_type start_date end_date status fk_coordination fk_itinerary quarter",
+  })
 })
 
 // Método para obtener datos limpios según el tipo

@@ -8,9 +8,9 @@ import {
   updateUser,
   deleteUser,
   addFichaToInstructor,
-  updateFichaFromInstructor,
   removeFichaFromInstructor,
   getUserStats,
+  updateInstructorFichas, // Importar la nueva función
 } from "../controllers/userController.js"
 
 const routesInstructor = Router()
@@ -81,8 +81,11 @@ routesInstructor.put("/:id", debugRequest, ensureInstructorType, updateUser)
 routesInstructor.delete("/:id", deleteUser)
 
 // Rutas para manejar fichas de instructores
+// Cambiar la ruta para añadir múltiples fichas (ahora recibe un array de IDs)
 routesInstructor.post("/:id/fichas", debugRequest, addFichaToInstructor)
-routesInstructor.put("/:id/fichas/:fichaId", debugRequest, updateFichaFromInstructor)
+// NUEVA: Ruta para actualizar todas las fichas de un instructor (reemplaza el array completo)
+routesInstructor.put("/:id/fichas", debugRequest, updateInstructorFichas)
+// Mantener la ruta para eliminar ficha individual
 routesInstructor.delete("/:id/fichas/:fichaId", removeFichaFromInstructor)
 // #fin modulos dickson
 

@@ -1,6 +1,7 @@
 // #inicio modulos dickson
 import User from "../models/user.js"
 import Role from "../models/role.js"
+import mongoose from "mongoose" // Importar mongoose para usar mongoose.model('Course')
 
 // Función helper para buscar rol por nombre
 const findRoleByName = async (roleName) => {
@@ -116,12 +117,25 @@ export const getAllUsers = async (req, res) => {
       if (tipoUsuario === "aprendiz") {
         filter.nivel = Number.parseInt(nivel)
       } else if (tipoUsuario === "instructor") {
-        filter["fichas.nivel"] = Number.parseInt(nivel)
+        filter["fichas.nivel"] = Number.parseInt(nivel) // Esto ya no es necesario si fichas es un array de ObjectIds
       }
       console.log(`Filtrando por nivel: ${nivel}`)
     }
 
-    const users = await User.find(filter).populate("role", "name description status").sort({ createdAt: -1 })
+    // Construir query base
+    let query = User.find(filter).populate("role", "name description status")
+
+    // Agregar populate para fichas si se consultan instructores
+    if (!tipoUsuario || tipoUsuario === "instructor") {
+      query = query.populate({
+        path: "fichas",
+        select:
+          "code area fk_programs course_status offer_type start_date end_date status fk_coordination fk_itinerary quarter",
+        match: { status: true }, // Solo fichas activas
+      })
+    }
+
+    const users = await query.sort({ createdAt: -1 })
 
     // Limpiar respuesta según el tipo de usuario
     const cleanUsers = users.map((user) => {
@@ -164,7 +178,16 @@ export const getUserById = async (req, res) => {
   try {
     console.log(`=== OBTENIENDO USUARIO CON ID: ${req.params.id} ===`)
 
-    const user = await User.findById(req.params.id).populate("role", "name description status")
+    let query = User.findById(req.params.id).populate("role", "name description status")
+
+    // Agregar populate para fichas
+    query = query.populate({
+      path: "fichas",
+      select:
+        "code area fk_programs course_status offer_type start_date end_date status fk_coordination fk_itinerary quarter",
+    })
+
+    const user = await query
 
     if (!user) {
       console.log("Usuario no encontrado")
@@ -606,61 +629,67 @@ export const updatePoints = async (req, res) => {
   }
 }
 
-// Añadir una ficha a un instructor
+// Función addFichaToInstructor - cambiar lógica
 export const addFichaToInstructor = async (req, res) => {
   try {
-    console.log(`=== AÑADIENDO FICHA AL INSTRUCTOR CON ID: ${req.params.id} ===`)
-    console.log("Datos de la ficha:", req.body)
+    console.log(`=== AÑADIENDO FICHAS AL INSTRUCTOR CON ID: ${req.params.id} ===`)
+    console.log("Datos de las fichas:", req.body)
 
     const { id } = req.params
-    const fichaData = req.body
+    const { fichaIds } = req.body // Ahora recibe array de IDs
 
-    // Validar que la ficha tenga los campos requeridos
-    if (!fichaData.numero || !fichaData.nivel || !fichaData.programa || !fichaData.fechaInicio || !fichaData.fechaFin) {
+    // Validar que fichaIds sea un array
+    if (!Array.isArray(fichaIds)) {
       return res.status(400).json({
-        message: "Faltan campos requeridos para la ficha: numero, nivel, programa, fechaInicio, fechaFin",
+        message: "fichaIds debe ser un array de IDs de fichas",
       })
     }
 
-    const user = await User.findById(id).populate("role", "name description status")
-    if (!user) {
-      console.log("Usuario no encontrado")
-      return res.status(404).json({ message: "Usuario no encontrado" })
-    }
-
-    if (user.tipoUsuario !== "instructor") {
-      return res.status(400).json({ message: "Solo se pueden añadir fichas a instructores" })
-    }
-
-    // Verificar que no exista ya una ficha con el mismo número
-    const existingFicha = user.fichas.find((ficha) => ficha.numero === fichaData.numero)
-    if (existingFicha) {
-      console.log(`Ya existe una ficha con número: ${fichaData.numero}`)
-      return res.status(400).json({ message: "Ya existe una ficha con este número para este instructor" })
-    }
-
-    // Añadir la nueva ficha
-    user.fichas.push({
-      numero: fichaData.numero,
-      nivel: fichaData.nivel,
-      programa: fichaData.programa,
-      fechaInicio: fichaData.fechaInicio,
-      fechaFin: fichaData.fechaFin,
-      estudiantes: fichaData.estudiantes || [],
+    // Validar que las fichas existan en la colección courses
+    const Course = mongoose.model("Course")
+    const existingCourses = await Course.find({
+      _id: { $in: fichaIds },
+      status: true,
     })
 
-    const updatedUser = await user.save()
-    await updatedUser.populate("role", "name description status")
+    if (existingCourses.length !== fichaIds.length) {
+      return res.status(400).json({
+        message: "Una o más fichas no existen o están inactivas",
+      })
+    }
 
-    console.log(`Ficha añadida exitosamente al instructor: ${user.nombre} ${user.apellido}`)
+    const user = await User.findById(id)
+    if (!user || user.tipoUsuario !== "instructor") {
+      return res.status(404).json({ message: "Instructor no encontrado" })
+    }
+
+    // Agregar fichas (evitar duplicados)
+    const currentFichas = user.fichas.map((ficha) => ficha.toString())
+    const newFichas = fichaIds.filter((fichaId) => !currentFichas.includes(fichaId.toString()))
+
+    user.fichas.push(...newFichas)
+
+    const updatedUser = await user.save()
+    await updatedUser.populate([
+      { path: "role", select: "name description status" },
+      {
+        path: "fichas",
+        select:
+          "code area fk_programs course_status offer_type start_date end_date status fk_coordination fk_itinerary quarter",
+      },
+    ])
+
+    console.log(`Fichas añadidas exitosamente al instructor: ${user.nombre} ${user.apellido}`)
     res.status(200).json(updatedUser.toCleanJSON())
   } catch (error) {
-    console.error("Error al añadir ficha:", error)
-    res.status(500).json({ message: "Error al añadir ficha", error: error.message })
+    console.error("Error al añadir fichas:", error)
+    res.status(500).json({ message: "Error al añadir fichas", error: error.message })
   }
 }
 
-// Actualizar una ficha específica de un instructor
+// Función updateFichaFromInstructor - esta función ya no es necesaria si se usa updateInstructorFichas para reemplazar
+// o addFichaToInstructor para añadir. Si se necesita actualizar campos de una ficha específica, se requeriría un enfoque diferente.
+// Por ahora, la guía sugiere reemplazar todas las fichas o añadir nuevas.
 export const updateFichaFromInstructor = async (req, res) => {
   try {
     console.log(`=== ACTUALIZANDO FICHA DEL INSTRUCTOR CON ID: ${req.params.id} ===`)
@@ -680,31 +709,32 @@ export const updateFichaFromInstructor = async (req, res) => {
       return res.status(400).json({ message: "Solo se pueden actualizar fichas de instructores" })
     }
 
-    const ficha = user.fichas.id(fichaId)
-    if (!ficha) {
-      console.log("Ficha no encontrada")
-      return res.status(404).json({ message: "Ficha no encontrada" })
-    }
+    // En el nuevo esquema, fichaId es el ObjectId del curso.
+    // No se actualizan campos de la ficha directamente en el subdocumento,
+    // sino que se actualiza la referencia o se reemplaza el array completo.
+    // Si se necesita actualizar campos de la ficha, se debe hacer en el modelo Course.
+    // Esta función, tal como está, no tiene sentido con el nuevo esquema de referencia.
+    // Se mantendrá para evitar errores, pero su funcionalidad es limitada.
+    // Para actualizar los detalles de una ficha, se debe actualizar el documento Course directamente.
 
-    // Actualizar los campos de la ficha
-    Object.keys(updateData).forEach((key) => {
-      if (updateData[key] !== undefined) {
-        ficha[key] = updateData[key]
-      }
+    // Si se intenta actualizar una ficha que no es un subdocumento, esto no funcionará como antes.
+    // Se podría usar para "reemplazar" una ficha por otra, pero eso sería un DELETE + ADD.
+    // La guía sugiere `updateInstructorFichas` para reemplazar el array completo.
+
+    // Para mantener la compatibilidad mínima, se podría verificar si fichaId es un ObjectId válido
+    // y si está en el array de fichas del instructor, pero no se puede "actualizar" sus propiedades.
+
+    return res.status(400).json({
+      message:
+        "La actualización de fichas individuales no es soportada directamente con el nuevo esquema de referencias. Use PUT /api/user/:id/fichas para reemplazar todas las fichas o actualice el curso directamente.",
     })
-
-    const updatedUser = await user.save()
-    await updatedUser.populate("role", "name description status")
-
-    console.log(`Ficha actualizada exitosamente`)
-    res.status(200).json(updatedUser.toCleanJSON())
   } catch (error) {
     console.error("Error al actualizar ficha:", error)
     res.status(500).json({ message: "Error al actualizar ficha", error: error.message })
   }
 }
 
-// Eliminar una ficha específica de un instructor
+// Función removeFichaFromInstructor - simplificar
 export const removeFichaFromInstructor = async (req, res) => {
   try {
     console.log(`=== ELIMINANDO FICHA DEL INSTRUCTOR CON ID: ${req.params.id} ===`)
@@ -712,32 +742,95 @@ export const removeFichaFromInstructor = async (req, res) => {
 
     const { id, fichaId } = req.params
 
-    const user = await User.findById(id).populate("role", "name description status")
-    if (!user) {
-      console.log("Usuario no encontrado")
-      return res.status(404).json({ message: "Usuario no encontrado" })
+    const user = await User.findById(id)
+    if (!user || user.tipoUsuario !== "instructor") {
+      return res.status(404).json({ message: "Instructor no encontrado" })
     }
 
-    if (user.tipoUsuario !== "instructor") {
-      return res.status(400).json({ message: "Solo se pueden eliminar fichas de instructores" })
+    // Verificar que la ficha esté asignada
+    const fichaIndex = user.fichas.findIndex((ficha) => ficha.toString() === fichaId)
+    if (fichaIndex === -1) {
+      return res.status(404).json({ message: "Ficha no encontrada en este instructor" })
     }
 
-    const ficha = user.fichas.id(fichaId)
-    if (!ficha) {
-      console.log("Ficha no encontrada")
-      return res.status(404).json({ message: "Ficha no encontrada" })
-    }
+    // Remover la ficha del array
+    user.fichas.splice(fichaIndex, 1)
 
-    // Eliminar la ficha
-    user.fichas.pull(fichaId)
     const updatedUser = await user.save()
-    await updatedUser.populate("role", "name description status")
+    await updatedUser.populate([
+      { path: "role", select: "name description status" },
+      {
+        path: "fichas",
+        select:
+          "code area fk_programs course_status offer_type start_date end_date status fk_coordination fk_itinerary quarter",
+      },
+    ])
 
     console.log(`Ficha eliminada exitosamente`)
-    res.status(200).json({ message: "Ficha eliminada exitosamente", user: updatedUser.toCleanJSON() })
+    res.status(200).json({
+      message: "Ficha eliminada exitosamente",
+      user: updatedUser.toCleanJSON(),
+    })
   } catch (error) {
     console.error("Error al eliminar ficha:", error)
     res.status(500).json({ message: "Error al eliminar ficha", error: error.message })
+  }
+}
+
+// NUEVA función para actualizar todas las fichas de un instructor
+export const updateInstructorFichas = async (req, res) => {
+  try {
+    console.log(`=== ACTUALIZANDO FICHAS DEL INSTRUCTOR CON ID: ${req.params.id} ===`)
+    console.log("Nuevas fichas:", req.body)
+
+    const { id } = req.params
+    const { fichaIds } = req.body
+
+    // Validar que fichaIds sea un array
+    if (!Array.isArray(fichaIds)) {
+      return res.status(400).json({
+        message: "fichaIds debe ser un array de IDs de fichas",
+      })
+    }
+
+    // Si el array está vacío, permitirlo (instructor sin fichas)
+    if (fichaIds.length > 0) {
+      // Validar que las fichas existan en la colección courses
+      const Course = mongoose.model("Course")
+      const existingCourses = await Course.find({
+        _id: { $in: fichaIds },
+        status: true,
+      })
+
+      if (existingCourses.length !== fichaIds.length) {
+        return res.status(400).json({
+          message: "Una o más fichas no existen o están inactivas",
+        })
+      }
+    }
+
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { fichas: fichaIds },
+      { new: true, runValidators: true },
+    ).populate([
+      { path: "role", select: "name description status" },
+      {
+        path: "fichas",
+        select:
+          "code area fk_programs course_status offer_type start_date end_date status fk_coordination fk_itinerary quarter",
+      },
+    ])
+
+    if (!updatedUser || updatedUser.tipoUsuario !== "instructor") {
+      return res.status(404).json({ message: "Instructor no encontrado" })
+    }
+
+    console.log(`Fichas actualizadas exitosamente para: ${updatedUser.nombre} ${updatedUser.apellido}`)
+    res.status(200).json(updatedUser.toCleanJSON())
+  } catch (error) {
+    console.error("Error al actualizar fichas:", error)
+    res.status(500).json({ message: "Error al actualizar fichas", error: error.message })
   }
 }
 

@@ -9,10 +9,10 @@ import {
   updateProgress,
   updatePoints,
   addFichaToInstructor,
-  updateFichaFromInstructor,
   removeFichaFromInstructor,
   getUserStats,
   massUpdateUsers,
+  updateInstructorFichas, // Importar la nueva función
 } from "../controllers/userController.js"
 
 const routesUser = Router()
@@ -44,8 +44,11 @@ routesUser.patch("/:id/points", debugRequest, updatePoints)
 routesUser.patch("/mass-update", debugRequest, massUpdateUsers)
 
 // Rutas para manejar fichas de instructores
+// Cambiar la ruta para añadir múltiples fichas (ahora recibe un array de IDs)
 routesUser.post("/:id/fichas", debugRequest, addFichaToInstructor)
-routesUser.put("/:id/fichas/:fichaId", debugRequest, updateFichaFromInstructor)
+// NUEVA: Ruta para actualizar todas las fichas de un instructor (reemplaza el array completo)
+routesUser.put("/:id/fichas", debugRequest, updateInstructorFichas)
+// Mantener la ruta para eliminar ficha individual
 routesUser.delete("/:id/fichas/:fichaId", removeFichaFromInstructor)
 
 export default routesUser
