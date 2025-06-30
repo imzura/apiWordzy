@@ -13,7 +13,7 @@ const SupportMaterialSchema = new Schema({
     },
     tema: {
       type: String,
-      required: [true, "El tema es obligatorio"],
+      required: [false, "El tema no es obligatorio"],
       trim: true,
     },
     estado: {
