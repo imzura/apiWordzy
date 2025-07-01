@@ -62,9 +62,14 @@ class SupportMaterialService {
         throw new Error("El título es obligatorio")
       }
 
-      if (!materialData.tema || materialData.tema.trim() === "") {
-        throw new Error("El tema es obligatorio")
+      // Normalizar estado a minúsculas para cumplir con el enum
+      if (materialData.estado) {
+        materialData.estado = materialData.estado.toLowerCase()
       }
+
+      // if (!materialData.tema || materialData.tema.trim() === "") {
+      //   throw new Error("El tema es obligatorio")
+      // }
 
       if (!materialData.contenido || materialData.contenido.trim() === "") {
         throw new Error("El contenido es obligatorio")

@@ -8,6 +8,7 @@ import routesApprentice from "./routeApprentice.js"
 import routesCoursePrograming from "./routesCourseProgramming.js"
 import routesSupportMaterial from "./supportMaterialRoutes.js"
 import routesUpload from "./uploadRoutes.js"
+import routesUpload1 from "./uploadRoutes1.js"
 import routesUser from "./routeUser.js"
 import programRoutes from "./routesProgram.js"
 import courseRoutes from "./routesCourse.js"
@@ -28,6 +29,7 @@ router.use("/apprentice-progress", routeApprenticeProgress)
 router.use("/program", programRoutes)
 router.use("/support-materials", routesSupportMaterial)
 router.use("/upload", routesUpload)
+router.use("/upload/support-material", routesUpload1)
 router.use("/user", routesUser)
 router.use("/course", courseRoutes)
 router.use("/scales", scaleRoutes)
