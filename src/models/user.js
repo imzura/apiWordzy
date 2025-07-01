@@ -106,12 +106,6 @@ const userSchema = new mongoose.Schema(
         },
       },
     ],
-    nivel: {
-      type: Number,
-      min: [1, "El nivel mínimo es 1"],
-      max: [3, "El nivel máximo es 3"],
-      default: 1,
-    },
     programa: {
       type: String,
       trim: true,
