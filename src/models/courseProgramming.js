@@ -30,6 +30,14 @@ const TopicSchema = new Schema({
     ref: 'Topic',
     required: true
   },
+  name: { // nuevo campo
+    type: String,
+    required: true
+  },
+  description: { // nuevo campo
+    type: String,
+    required: true
+  },
   value: {
     type: Number,
     required: true,
