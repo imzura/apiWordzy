@@ -27,73 +27,57 @@ const userSchema = new mongoose.Schema(
     tipoUsuario: {
       type: String,
       required: [true, "El tipo de usuario es obligatorio"],
-      enum: {
-        values: ["aprendiz", "instructor", "administrador"], // AÑADIDO: administrador
-        message: 'El tipo de usuario debe ser "aprendiz", "instructor" o "administrador"',
-      },
+      enum: ["aprendiz", "instructor", "administrador"],
       index: true,
     },
 
     // Campos comunes para ambos tipos
     nombre: {
       type: String,
-      required: [true, "El nombre es obligatorio"],
+      required: true,
       trim: true,
-      minlength: [2, "El nombre debe tener al menos 2 caracteres"],
-      maxlength: [50, "El nombre no puede exceder 50 caracteres"],
     },
     apellido: {
       type: String,
-      required: [true, "El apellido es obligatorio"],
+      required: true,
       trim: true,
-      minlength: [2, "El apellido debe tener al menos 2 caracteres"],
-      maxlength: [50, "El apellido no puede exceder 50 caracteres"],
     },
     documento: {
       type: String,
-      required: [true, "El documento es obligatorio"],
+      required: true,
       unique: true,
       trim: true,
-      minlength: [6, "El documento debe tener al menos 6 caracteres"],
-      maxlength: [20, "El documento no puede exceder 20 caracteres"],
     },
     tipoDocumento: {
       type: String,
-      required: [true, "El tipo de documento es obligatorio"],
-      enum: {
-        values: ["CC", "TI", "PPT", "PEP"],
-        message: "Tipo de documento no válido",
-      },
+      required: true,
+      enum: ["CC", "TI", "PPT", "PEP"],
     },
     estado: {
       type: String,
-      required: [true, "El estado es obligatorio"],
-      enum: {
-        values: ["En formación", "Condicionado", "Retirado", "Graduado", "Activo", "Inactivo"],
-        message: "Estado no válido",
-      },
+      required: true,
+      enum: ["En formación", "Condicionado", "Retirado", "Graduado", "Activo", "Inactivo"],
     },
     telefono: {
       type: String,
-      required: [true, "El teléfono es obligatorio"],
+      required: true,
       trim: true,
     },
     correo: {
       type: String,
-      required: [true, "El correo es obligatorio"],
+      required: true,
       lowercase: true,
       trim: true,
-      match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, "Email inválido"],
+      match: /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
     },
     contraseña: {
       type: String,
-      required: [true, "La contraseña es obligatoria"],
-      minlength: [1, "La contraseña debe tener al menos 1 carácter"],
+      required: true,
     },
     role: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "Role",
-      required: [true, "El rol es obligatorio"],
+      required: true,
     },
 
     // Campos específicos para APRENDICES
@@ -106,23 +90,15 @@ const userSchema = new mongoose.Schema(
         },
       },
     ],
-    nivel: {
-      type: Number,
-      min: [1, "El nivel mínimo es 1"],
-      max: [3, "El nivel máximo es 3"],
-      default: 1,
-    },
     programa: {
       type: String,
       trim: true,
-      minlength: [2, "El programa debe tener al menos 2 caracteres"],
-      maxlength: [100, "El programa no puede exceder 100 caracteres"],
     },
     progresoActual: {
       type: Number,
       default: 0,
-      min: [0, "El progreso mínimo es 0"],
-      max: [100, "El progreso máximo es 100"],
+      min: 0,
+      max: 100,
     },
     progresoNiveles: {
       type: [progresoNivelSchema],
@@ -135,7 +111,7 @@ const userSchema = new mongoose.Schema(
     puntos: {
       type: Number,
       default: 0,
-      min: [0, "Los puntos no pueden ser negativos"],
+      min: 0,
       validate: {
         validator: Number.isInteger,
         message: "Los puntos deben ser un número entero",
