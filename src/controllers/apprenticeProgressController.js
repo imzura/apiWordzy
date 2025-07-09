@@ -3,7 +3,7 @@ import ProgressCalculationService from "../services/progressCalculationService.j
 import mongoose from "mongoose"
 import { validationResult } from "express-validator"
 
-// GET - Progreso por aprendiz y nivel
+// GET - Progreso por aprendiz y nivel - MEJORADO PARA COINCIDIR CON PROGRESSVIEW
 export const getProgressByApprenticeAndLevel = async (req, res) => {
   try {
     const { apprenticeId, level } = req.params
@@ -34,58 +34,150 @@ export const getProgressByApprenticeAndLevel = async (req, res) => {
       apprenticeId: new mongoose.Types.ObjectId(apprenticeId),
       level: levelNum,
     })
-      .populate("evaluationId", "nombre tipoEvaluacion descripcion tematica") // Campos correctos del modelo
-      .populate("apprenticeId", "nombre apellido")
+      .populate("evaluationId", "nombre tipoEvaluacion descripcion tematica")
+      .populate("apprenticeId", "nombre apellido documento correo telefono estado tipoDocumento")
+      .populate("courseId", "code fk_programs")
       .sort({ createdAt: -1 })
 
     console.log(`✅ Progreso encontrado: ${progress.length} registros`)
-    console.log(
-      "📋 Datos de evaluación:",
-      progress.map((p) => ({
-        id: p._id,
-        evaluacion: p.evaluationId
-          ? {
-              nombre: p.evaluationId.nombre,
-              tipo: p.evaluationId.tipoEvaluacion,
-            }
-          : null,
-      })),
-    )
 
-    // Obtener estadísticas
-    let statistics = null
-    try {
-      const stats = await ApprenticeProgress.getProgressStatistics(apprenticeId, levelNum)
-      statistics = stats[0] || {
-        totalAttempts: 0,
-        totalScore: 0,
-        totalMaxScore: 0,
-        passedAttempts: 0,
-        failedAttempts: 0,
-        passRate: 0,
-        averagePercentage: 0,
-        averageTimeSpent: 0,
-      }
-      console.log("✅ Estadísticas calculadas:", statistics)
-    } catch (statsError) {
-      console.warn("⚠️ Error calculando estadísticas:", statsError.message)
+    // NUEVA LÓGICA: Calcular estadísticas como ProgressView
+    let statistics = {
+      totalAttempts: progress.length,
+      totalScore: 0,
+      totalMaxScore: 0,
+      passedAttempts: 0,
+      failedAttempts: 0,
+      passRate: 0,
+      averagePercentage: 0,
+      averageTimeSpent: 0,
+      // Nuevas estadísticas que coinciden con ProgressView
+      puntosAprobadas: 0,
+      evaluacionesAprobadas: 0,
+      evaluacionesProgramadas: 0,
+    }
+
+    if (progress.length > 0) {
+      // Agrupar por evaluationId para obtener solo el último intento de cada evaluación
+      const ultimosIntentosPorEvaluacion = new Map()
+
+      progress.forEach((attempt) => {
+        const evalId = attempt.evaluationId._id.toString()
+
+        // Si no existe la evaluación o este intento es más reciente, actualizar
+        if (
+          !ultimosIntentosPorEvaluacion.has(evalId) ||
+          new Date(attempt.createdAt) > new Date(ultimosIntentosPorEvaluacion.get(evalId).createdAt)
+        ) {
+          ultimosIntentosPorEvaluacion.set(evalId, attempt)
+        }
+      })
+
+      // Convertir el Map a array - estos son los últimos intentos únicos
+      const ultimosIntentosArray = Array.from(ultimosIntentosPorEvaluacion.values())
+
+      console.log(`📊 Últimos intentos únicos: ${ultimosIntentosArray.length} de ${progress.length} totales`)
+
+      // Calcular estadísticas basadas en últimos intentos
+      let puntosAprobadas = 0
+      let evaluacionesAprobadas = 0
+      let totalTimeSpent = 0
+      let totalPercentage = 0
+
+      ultimosIntentosArray.forEach((attempt) => {
+        // Solo contar si está aprobado (passed = true)
+        if (attempt.passed) {
+          puntosAprobadas += attempt.score || 0
+          evaluacionesAprobadas++
+          console.log(`✅ Evaluación aprobada: ${attempt.evaluationId.nombre} - ${attempt.score} puntos`)
+        } else {
+          console.log(`❌ Evaluación no aprobada: ${attempt.evaluationId.nombre} - ${attempt.score} puntos`)
+        }
+
+        totalTimeSpent += attempt.timeSpent || 0
+        totalPercentage += attempt.percentage || 0
+      })
+
+      // Actualizar estadísticas
       statistics = {
-        totalAttempts: 0,
-        totalScore: 0,
-        totalMaxScore: 0,
-        passedAttempts: 0,
-        failedAttempts: 0,
-        passRate: 0,
-        averagePercentage: 0,
-        averageTimeSpent: 0,
+        totalAttempts: progress.length, // Total de todos los intentos
+        totalScore: progress.reduce((sum, p) => sum + (p.score || 0), 0),
+        totalMaxScore: progress.reduce((sum, p) => sum + (p.maxScore || 0), 0),
+        passedAttempts: progress.filter((p) => p.passed).length,
+        failedAttempts: progress.filter((p) => !p.passed).length,
+        passRate:
+          progress.length > 0 ? Math.round((progress.filter((p) => p.passed).length / progress.length) * 100) : 0,
+        averagePercentage:
+          ultimosIntentosArray.length > 0 ? Math.round(totalPercentage / ultimosIntentosArray.length) : 0,
+        averageTimeSpent:
+          ultimosIntentosArray.length > 0 ? Math.round(totalTimeSpent / ultimosIntentosArray.length) : 0,
+
+        // ESTADÍSTICAS CLAVE PARA PROGRESSVIEW
+        puntosAprobadas: puntosAprobadas, // Solo puntos de evaluaciones aprobadas (últimos intentos)
+        evaluacionesAprobadas: evaluacionesAprobadas, // Solo evaluaciones aprobadas (últimos intentos)
+        evaluacionesProgramadas: ultimosIntentosArray.length, // Total de evaluaciones únicas realizadas
       }
+
+      console.log(`📊 Estadísticas calculadas:`, {
+        puntosAprobadas: statistics.puntosAprobadas,
+        evaluacionesAprobadas: statistics.evaluacionesAprobadas,
+        evaluacionesProgramadas: statistics.evaluacionesProgramadas,
+        totalIntentos: statistics.totalAttempts,
+      })
+    }
+
+    // Estructurar respuesta mejorada
+    let apprenticeInfo = null
+    const evaluations = []
+
+    if (progress.length > 0) {
+      // Extraer información del aprendiz una sola vez
+      const firstRecord = progress[0]
+      apprenticeInfo = {
+        _id: firstRecord.apprenticeId._id,
+        nombre: firstRecord.apprenticeId.nombre,
+        apellido: firstRecord.apprenticeId.apellido,
+        documento: firstRecord.apprenticeId.documento,
+        correo: firstRecord.apprenticeId.correo,
+        telefono: firstRecord.apprenticeId.telefono,
+        estado: firstRecord.apprenticeId.estado,
+        tipoDocumento: firstRecord.apprenticeId.tipoDocumento,
+        ficha: {
+          _id: firstRecord.courseId._id,
+          code: firstRecord.courseId.code,
+          programa: firstRecord.courseId.fk_programs,
+        },
+      }
+
+      // Extraer solo las evaluaciones sin repetir datos del aprendiz
+      progress.forEach((record) => {
+        evaluations.push({
+          _id: record._id,
+          evaluationId: record.evaluationId,
+          attemptNumber: record.attemptNumber,
+          score: record.score,
+          maxScore: record.maxScore,
+          percentage: record.percentage,
+          passed: record.passed,
+          timeSpent: record.timeSpent,
+          completedAt: record.completedAt,
+          status: record.status,
+          createdAt: record.createdAt,
+          updatedAt: record.updatedAt,
+          startedAt: record.startedAt,
+          answers: record.answers,
+        })
+      })
     }
 
     res.json({
       success: true,
       data: {
-        attempts: progress,
+        apprentice: apprenticeInfo,
+        evaluations: evaluations,
         statistics: statistics,
+        level: levelNum,
+        totalEvaluations: evaluations.length,
       },
     })
   } catch (error) {
@@ -99,12 +191,12 @@ export const getProgressByApprenticeAndLevel = async (req, res) => {
   }
 }
 
-// GET - Obtener todo el progreso con filtros
+// GET - Obtener todo el progreso con filtros - MEJORADO
 export const getApprenticeProgress = async (req, res) => {
   try {
-    const { apprenticeId, courseId, level, status, page = 1, limit = 10 } = req.query
+    const { apprenticeId, courseId, level, status, page = 1, limit = 10, grouped = false } = req.query
 
-    console.log("🔍 Obteniendo progreso con filtros:", { apprenticeId, courseId, level, status })
+    console.log("🔍 Obteniendo progreso con filtros:", { apprenticeId, courseId, level, status, grouped })
 
     // Construir filtros
     const filters = {}
@@ -132,8 +224,8 @@ export const getApprenticeProgress = async (req, res) => {
     const skip = (Number.parseInt(page) - 1) * Number.parseInt(limit)
 
     const progress = await ApprenticeProgress.find(filters)
-      .populate("apprenticeId", "nombre apellido documento correo")
-      .populate("evaluationId", "nombre tipoEvaluacion descripcion tematica") // Campos correctos
+      .populate("apprenticeId", "nombre apellido documento correo telefono estado tipoDocumento")
+      .populate("evaluationId", "nombre tipoEvaluacion descripcion tematica")
       .populate("courseId", "code fk_programs")
       .sort({ createdAt: -1 })
       .skip(skip)
@@ -143,6 +235,64 @@ export const getApprenticeProgress = async (req, res) => {
 
     console.log(`✅ Encontrados ${progress.length} registros de ${total} totales`)
 
+    // Si se solicita agrupado, estructurar diferente
+    if (grouped === "true" && apprenticeId) {
+      const groupedData = {}
+
+      progress.forEach((record) => {
+        const apprenticeKey = record.apprenticeId._id.toString()
+
+        if (!groupedData[apprenticeKey]) {
+          groupedData[apprenticeKey] = {
+            apprentice: {
+              _id: record.apprenticeId._id,
+              nombre: record.apprenticeId.nombre,
+              apellido: record.apprenticeId.apellido,
+              documento: record.apprenticeId.documento,
+              correo: record.apprenticeId.correo,
+              telefono: record.apprenticeId.telefono,
+              estado: record.apprenticeId.estado,
+              tipoDocumento: record.apprenticeId.tipoDocumento,
+            },
+            course: {
+              _id: record.courseId._id,
+              code: record.courseId.code,
+              programa: record.courseId.fk_programs,
+            },
+            evaluations: [],
+          }
+        }
+
+        groupedData[apprenticeKey].evaluations.push({
+          _id: record._id,
+          evaluationId: record.evaluationId,
+          level: record.level,
+          attemptNumber: record.attemptNumber,
+          score: record.score,
+          maxScore: record.maxScore,
+          percentage: record.percentage,
+          passed: record.passed,
+          timeSpent: record.timeSpent,
+          completedAt: record.completedAt,
+          status: record.status,
+          createdAt: record.createdAt,
+          updatedAt: record.updatedAt,
+          startedAt: record.startedAt,
+        })
+      })
+
+      return res.json({
+        success: true,
+        data: Object.values(groupedData),
+        pagination: {
+          current: Number.parseInt(page),
+          pages: Math.ceil(total / Number.parseInt(limit)),
+          total,
+        },
+      })
+    }
+
+    // Respuesta normal (sin agrupar)
     res.json({
       success: true,
       data: progress,
@@ -169,7 +319,6 @@ export const getProgressByCourse = async (req, res) => {
 
     console.log(`🔍 Obteniendo progreso para curso: ${courseId}`)
 
-    // Validar que el courseId sea un ObjectId válido
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
       return res.status(400).json({
         success: false,
@@ -200,7 +349,6 @@ export const getProgressById = async (req, res) => {
   try {
     const { id } = req.params
 
-    // Validar que el id sea un ObjectId válido
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
@@ -210,7 +358,7 @@ export const getProgressById = async (req, res) => {
 
     const progress = await ApprenticeProgress.findById(id)
       .populate("apprenticeId", "nombre apellido documento correo")
-      .populate("evaluationId", "nombre tipoEvaluacion descripcion tematica") // Campos correctos
+      .populate("evaluationId", "nombre tipoEvaluacion descripcion tematica")
       .populate("courseId", "code fk_programs")
       .populate("feedback.instructorId", "nombre apellido")
 
@@ -238,7 +386,6 @@ export const getProgressById = async (req, res) => {
 // POST - Crear nuevo registro de progreso
 export const createApprenticeProgress = async (req, res) => {
   try {
-    // Manejar errores de validación
     const errors = validationResult(req)
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -252,7 +399,6 @@ export const createApprenticeProgress = async (req, res) => {
 
     console.log("🔍 Creando nuevo progreso:", progressData)
 
-    // Verificar si ya existe un intento para esta evaluación
     const existingAttempts = await ApprenticeProgress.countDocuments({
       apprenticeId: progressData.apprenticeId,
       evaluationId: progressData.evaluationId,
@@ -268,13 +414,12 @@ export const createApprenticeProgress = async (req, res) => {
 
     await progress.populate([
       { path: "apprenticeId", select: "nombre apellido" },
-      { path: "evaluationId", select: "nombre tipoEvaluacion descripcion" }, // Campos correctos
+      { path: "evaluationId", select: "nombre tipoEvaluacion descripcion" },
       { path: "courseId", select: "code fk_programs" },
     ])
 
     console.log("✅ Progreso creado exitosamente:", progress._id)
 
-    // Actualizar el progreso general del aprendiz
     try {
       await ProgressCalculationService.updateApprenticeProgress(progressData.apprenticeId)
     } catch (updateError) {
@@ -299,7 +444,6 @@ export const createApprenticeProgress = async (req, res) => {
 // PUT - Actualizar progreso
 export const updateApprenticeProgress = async (req, res) => {
   try {
-    // Manejar errores de validación
     const errors = validationResult(req)
     if (!errors.isEmpty()) {
       return res.status(400).json({
@@ -314,7 +458,6 @@ export const updateApprenticeProgress = async (req, res) => {
 
     console.log(`🔍 Actualizando progreso: ${id}`, updateData)
 
-    // Validar que el id sea un ObjectId válido
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
@@ -322,7 +465,6 @@ export const updateApprenticeProgress = async (req, res) => {
       })
     }
 
-    // Si se está agregando retroalimentación, agregar fecha
     if (updateData.feedback && updateData.feedback.comment) {
       updateData.feedback.feedbackDate = new Date()
     }
@@ -332,7 +474,7 @@ export const updateApprenticeProgress = async (req, res) => {
       runValidators: true,
     }).populate([
       { path: "apprenticeId", select: "nombre apellido" },
-      { path: "evaluationId", select: "nombre tipoEvaluacion descripcion" }, // Campos correctos
+      { path: "evaluationId", select: "nombre tipoEvaluacion descripcion" },
       { path: "courseId", select: "code fk_programs" },
       { path: "feedback.instructorId", select: "nombre apellido" },
     ])
@@ -346,7 +488,6 @@ export const updateApprenticeProgress = async (req, res) => {
 
     console.log("✅ Progreso actualizado exitosamente")
 
-    // Si se actualizó el puntaje, recalcular progreso general
     if (updateData.score !== undefined) {
       try {
         await ProgressCalculationService.updateApprenticeProgress(progress.apprenticeId._id)
@@ -377,7 +518,6 @@ export const deleteApprenticeProgress = async (req, res) => {
 
     console.log(`🔍 Eliminando progreso: ${id}`)
 
-    // Validar que el id sea un ObjectId válido
     if (!mongoose.Types.ObjectId.isValid(id)) {
       return res.status(400).json({
         success: false,
@@ -396,7 +536,6 @@ export const deleteApprenticeProgress = async (req, res) => {
 
     console.log("✅ Progreso eliminado exitosamente")
 
-    // Recalcular progreso general del aprendiz después de eliminar
     try {
       await ProgressCalculationService.updateApprenticeProgress(progress.apprenticeId)
     } catch (updateError) {
@@ -424,7 +563,6 @@ export const getFichaRanking = async (req, res) => {
 
     console.log(`🔍 Obteniendo ranking para curso: ${courseId}`)
 
-    // Validar que el courseId sea un ObjectId válido
     if (!mongoose.Types.ObjectId.isValid(courseId)) {
       return res.status(400).json({
         success: false,
@@ -460,7 +598,6 @@ export const getProgressStatistics = async (req, res) => {
     const statistics = {}
 
     if (apprenticeId && level) {
-      // Validar que el apprenticeId sea un ObjectId válido
       if (!mongoose.Types.ObjectId.isValid(apprenticeId)) {
         return res.status(400).json({
           success: false,
@@ -468,13 +605,11 @@ export const getProgressStatistics = async (req, res) => {
         })
       }
 
-      // Estadísticas por aprendiz y nivel
       const stats = await ApprenticeProgress.getProgressStatistics(apprenticeId, Number.parseInt(level))
       statistics.apprenticeLevel = stats[0] || null
     }
 
     if (courseId) {
-      // Validar que el courseId sea un ObjectId válido
       if (!mongoose.Types.ObjectId.isValid(courseId)) {
         return res.status(400).json({
           success: false,
@@ -482,7 +617,6 @@ export const getProgressStatistics = async (req, res) => {
         })
       }
 
-      // Estadísticas generales por ficha
       const fichaStats = await ProgressCalculationService.getFichaStatistics(courseId)
       statistics.ficha = fichaStats
     }

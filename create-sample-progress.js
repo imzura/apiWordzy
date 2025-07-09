@@ -1,133 +1,232 @@
 import mongoose from "mongoose"
 import ApprenticeProgress from "./src/models/apprenticeProgress.js"
 
-// Script para crear datos de ejemplo con temas específicos del nivel 1
+// Script para crear datos que demuestren el cálculo correcto de puntos
 
-async function createSampleProgress() {
+async function createSampleProgressWithMultipleAttempts() {
   try {
-    // Conectar a la base de datos
     await mongoose.connect("mongodb://127.0.0.1:27017/ApiWordzy", {
       useNewUrlParser: true,
       useUnifiedTopology: true,
     })
     console.log("✅ Conectado a MongoDB")
 
-    // Datos de ejemplo basados en la programación del nivel 1
     const sampleData = [
-      // TEMA 1 (topicId: "68647811d7e395f1bb05de8a") - Evaluaciones
+      // ==========================================
+      // EVALUACIÓN 1: Múltiples intentos - Solo el último aprobado debe contar
+      // ==========================================
+
+      // Primer intento - NO APROBADO (no debe contar para puntos)
       {
-        apprenticeId: "68649a3a103e64c3cc1a3e09", // ID del aprendiz
-        courseId: "686477edd7e395f1bb05de23", // ID de un curso existente
-        courseProgrammingId: "6864799cd7e395f1bb05df18", // ID de programación (usar el de tu JSON)
-        evaluationId: "68647857d7e395f1bb05de97", // ID de la actividad del tema 1
+        apprenticeId: new mongoose.Types.ObjectId("686ec3123adf8116efcea6ea"),
+        courseId: new mongoose.Types.ObjectId("686ec6673adf8116efcea8f4"),
+        courseProgrammingId: new mongoose.Types.ObjectId("686ec7ab3adf8116efceaa32"),
+        evaluationId: new mongoose.Types.ObjectId("686ec7493adf8116efceaa1d"), // verbo to be
         level: 1,
-        topicId: "68647811d7e395f1bb05de8a", // ID del tema 1
+        score: 45,
+        maxScore: 100,
+        percentage: 45,
+        timeSpent: 25,
+        passed: false, // NO APROBADO
+        status: "completed",
+        attemptNumber: 1,
+        startedAt: new Date("2025-07-09T19:30:00.000Z"),
+        completedAt: new Date("2025-07-09T19:55:00.000Z"),
+        createdAt: new Date("2025-07-09T19:55:00.000Z"),
+        updatedAt: new Date("2025-07-09T19:55:00.000Z"),
+        answers: [],
+      },
+
+      // Segundo intento - APROBADO (70 puntos - debe contar)
+      {
+        apprenticeId: new mongoose.Types.ObjectId("686ec3123adf8116efcea6ea"),
+        courseId: new mongoose.Types.ObjectId("686ec6673adf8116efcea8f4"),
+        courseProgrammingId: new mongoose.Types.ObjectId("686ec7ab3adf8116efceaa32"),
+        evaluationId: new mongoose.Types.ObjectId("686ec7493adf8116efceaa1d"), // verbo to be
+        level: 1,
+        score: 70,
+        maxScore: 100,
+        percentage: 70,
+        timeSpent: 22,
+        passed: true, // APROBADO
+        status: "completed",
+        attemptNumber: 2,
+        startedAt: new Date("2025-07-09T20:00:00.000Z"),
+        completedAt: new Date("2025-07-09T20:22:00.000Z"),
+        createdAt: new Date("2025-07-09T20:22:00.000Z"),
+        updatedAt: new Date("2025-07-09T20:22:00.000Z"),
+        answers: [],
+      },
+
+      // Tercer intento - APROBADO (85 puntos - este debe contar, no el anterior)
+      {
+        apprenticeId: new mongoose.Types.ObjectId("686ec3123adf8116efcea6ea"),
+        courseId: new mongoose.Types.ObjectId("686ec6673adf8116efcea8f4"),
+        courseProgrammingId: new mongoose.Types.ObjectId("686ec7ab3adf8116efceaa32"),
+        evaluationId: new mongoose.Types.ObjectId("686ec7493adf8116efceaa1d"), // verbo to be
+        level: 1,
         score: 85,
         maxScore: 100,
         percentage: 85,
-        timeSpent: 25,
-        passed: true, // Aprobado porque score >= 70
+        timeSpent: 20,
+        passed: true, // APROBADO - ÚLTIMO INTENTO
         status: "completed",
-        attemptNumber: 1,
-        completedAt: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      },
-      {
-        apprenticeId: "68649a3a103e64c3cc1a3e09",
-        courseId: "686477edd7e395f1bb05de23",
-        courseProgrammingId: "6864799cd7e395f1bb05df18",
-        evaluationId: "68647871d7e395f1bb05de9c", // ID del examen del tema 1
-        level: 1,
-        topicId: "68647811d7e395f1bb05de8a", // ID del tema 1
-        score: 78,
-        maxScore: 100,
-        percentage: 78,
-        timeSpent: 35,
-        passed: true, // Aprobado
-        status: "completed",
-        attemptNumber: 1,
-        completedAt: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        attemptNumber: 3,
+        startedAt: new Date("2025-07-09T21:00:00.000Z"),
+        completedAt: new Date("2025-07-09T21:20:00.000Z"),
+        createdAt: new Date("2025-07-09T21:20:00.000Z"),
+        updatedAt: new Date("2025-07-09T21:20:00.000Z"),
+        answers: [],
       },
 
-      // TEMA 2 (topicId: "68647833d7e395f1bb05de8e") - Evaluaciones
+      // ==========================================
+      // EVALUACIÓN 2: Un solo intento aprobado
+      // ==========================================
+
       {
-        apprenticeId: "68649a3a103e64c3cc1a3e09",
-        courseId: "686477edd7e395f1bb05de23",
-        courseProgrammingId: "6864799cd7e395f1bb05df18",
-        evaluationId: "686478a6d7e395f1bb05deac", // ID de la actividad del tema 2
+        apprenticeId: new mongoose.Types.ObjectId("686ec3123adf8116efcea6ea"),
+        courseId: new mongoose.Types.ObjectId("686ec6673adf8116efcea8f4"),
+        courseProgrammingId: new mongoose.Types.ObjectId("686ec7ab3adf8116efceaa32"),
+        evaluationId: new mongoose.Types.ObjectId("686ec76b3adf8116efceaa22"), // verbo to be 2
         level: 1,
-        topicId: "68647833d7e395f1bb05de8e", // ID del tema 2
         score: 92,
         maxScore: 100,
         percentage: 92,
-        timeSpent: 20,
-        passed: true, // Aprobado
+        timeSpent: 30,
+        passed: true, // APROBADO - ÚNICO INTENTO (92 puntos deben contar)
         status: "completed",
         attemptNumber: 1,
-        completedAt: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        startedAt: new Date("2025-07-09T22:00:00.000Z"),
+        completedAt: new Date("2025-07-09T22:30:00.000Z"),
+        createdAt: new Date("2025-07-09T22:30:00.000Z"),
+        updatedAt: new Date("2025-07-09T22:30:00.000Z"),
+        answers: [],
       },
+
+      // ==========================================
+      // EVALUACIÓN 3: Múltiples intentos, último no aprobado
+      // ==========================================
+
+      // Primer intento - APROBADO (80 puntos - debe contar porque es el último aprobado)
       {
-        apprenticeId: "68649a3a103e64c3cc1a3e09",
-        courseId: "686477edd7e395f1bb05de23",
-        courseProgrammingId: "6864799cd7e395f1bb05df18",
-        evaluationId: "686478cdd7e395f1bb05deb3", // ID del examen del tema 2
+        apprenticeId: new mongoose.Types.ObjectId("686ec3123adf8116efcea6ea"),
+        courseId: new mongoose.Types.ObjectId("686ec6673adf8116efcea8f4"),
+        courseProgrammingId: new mongoose.Types.ObjectId("686ec7ab3adf8116efceaa32"),
+        evaluationId: new mongoose.Types.ObjectId("686ec8a29e306911deeba8b4"), // presente simple
         level: 1,
-        topicId: "68647833d7e395f1bb05de8e", // ID del tema 2
-        score: 65,
+        score: 80,
         maxScore: 100,
-        percentage: 65,
-        timeSpent: 40,
-        passed: false, // No aprobado porque score < 70
+        percentage: 80,
+        timeSpent: 25,
+        passed: true, // APROBADO
         status: "completed",
         attemptNumber: 1,
-        completedAt: new Date(),
-        createdAt: new Date(),
-        updatedAt: new Date(),
+        startedAt: new Date("2025-07-10T09:00:00.000Z"),
+        completedAt: new Date("2025-07-10T09:25:00.000Z"),
+        createdAt: new Date("2025-07-10T09:25:00.000Z"),
+        updatedAt: new Date("2025-07-10T09:25:00.000Z"),
+        answers: [],
+      },
+
+      // Segundo intento - NO APROBADO (no debe afectar el conteo de puntos)
+      {
+        apprenticeId: new mongoose.Types.ObjectId("686ec3123adf8116efcea6ea"),
+        courseId: new mongoose.Types.ObjectId("686ec6673adf8116efcea8f4"),
+        courseProgrammingId: new mongoose.Types.ObjectId("686ec7ab3adf8116efceaa32"),
+        evaluationId: new mongoose.Types.ObjectId("686ec8a29e306911deeba8b4"), // presente simple
+        level: 1,
+        score: 55,
+        maxScore: 100,
+        percentage: 55,
+        timeSpent: 28,
+        passed: false, // NO APROBADO
+        status: "completed",
+        attemptNumber: 2,
+        startedAt: new Date("2025-07-10T10:00:00.000Z"),
+        completedAt: new Date("2025-07-10T10:28:00.000Z"),
+        createdAt: new Date("2025-07-10T10:28:00.000Z"),
+        updatedAt: new Date("2025-07-10T10:28:00.000Z"),
+        answers: [],
+      },
+
+      // ==========================================
+      // EVALUACIÓN 4: Solo intentos no aprobados
+      // ==========================================
+
+      {
+        apprenticeId: new mongoose.Types.ObjectId("686ec3123adf8116efcea6ea"),
+        courseId: new mongoose.Types.ObjectId("686ec6673adf8116efcea8f4"),
+        courseProgrammingId: new mongoose.Types.ObjectId("686ec7ab3adf8116efceaa32"),
+        evaluationId: new mongoose.Types.ObjectId("686ec8c99e306911deeba8bb"), // Presente Simple
+        level: 1,
+        score: 45,
+        maxScore: 100,
+        percentage: 45,
+        timeSpent: 35,
+        passed: false, // NO APROBADO (0 puntos deben contar)
+        status: "completed",
+        attemptNumber: 1,
+        startedAt: new Date("2025-07-10T11:00:00.000Z"),
+        completedAt: new Date("2025-07-10T11:35:00.000Z"),
+        createdAt: new Date("2025-07-10T11:35:00.000Z"),
+        updatedAt: new Date("2025-07-10T11:35:00.000Z"),
+        answers: [],
       },
     ]
 
-    // Limpiar datos existentes (opcional)
-    await ApprenticeProgress.deleteMany({})
+    // Limpiar datos existentes
+    await ApprenticeProgress.deleteMany({
+      apprenticeId: new mongoose.Types.ObjectId("686ec3123adf8116efcea6ea"),
+      level: 1,
+    })
     console.log("🗑️ Datos anteriores eliminados")
 
-    // Insertar datos de ejemplo
+    // Insertar datos
     const created = await ApprenticeProgress.insertMany(sampleData)
     console.log(`✅ Creados ${created.length} registros de progreso`)
 
-    // Mostrar resumen detallado
-    console.log("\n📊 RESUMEN DE DATOS INSERTADOS:")
-    console.log("👤 Aprendiz: 68649a3a103e64c3cc1a3e09")
-    console.log("📚 Nivel: 1")
-    console.log("\n📖 TEMA 1 (68647811d7e395f1bb05de8a):")
-    console.log("  📝 Actividad (68647857d7e395f1bb05de97): 85/100 ✅ APROBADA")
-    console.log("  📋 Examen (68647871d7e395f1bb05de9c): 78/100 ✅ APROBADO")
-    console.log("\n📖 TEMA 2 (68647833d7e395f1bb05de8e):")
-    console.log("  📝 Actividad (686478a6d7e395f1bb05deac): 92/100 ✅ APROBADA")
-    console.log("  📋 Examen (686478cdd7e395f1bb05deb3): 65/100 ❌ NO APROBADO")
+    // Análisis de los datos insertados
+    console.log("\n" + "=".repeat(70))
+    console.log("📊 ANÁLISIS DE CÁLCULO DE PUNTOS")
+    console.log("=".repeat(70))
 
-    console.log("\n🎯 ESTADÍSTICAS:")
-    const totalEvaluations = sampleData.length
-    const passedEvaluations = sampleData.filter((item) => item.passed).length
-    const averageScore = Math.round(sampleData.reduce((sum, item) => sum + item.score, 0) / totalEvaluations)
+    console.log("\n📝 EVALUACIÓN 1 (verbo to be - 686ec7493adf8116efceaa1d):")
+    console.log("   🔄 Intento 1: 45/100 ❌ NO APROBADO")
+    console.log("   🔄 Intento 2: 70/100 ✅ APROBADO")
+    console.log("   🔄 Intento 3: 85/100 ✅ APROBADO (ÚLTIMO)")
+    console.log("   💡 Puntos que deben contar: 85 (último intento aprobado)")
 
-    console.log(`  📝 Total evaluaciones: ${totalEvaluations}`)
-    console.log(`  ✅ Evaluaciones aprobadas: ${passedEvaluations}`)
-    console.log(`  📊 Promedio de puntaje: ${averageScore}`)
-    console.log(`  🎯 Tasa de aprobación: ${Math.round((passedEvaluations / totalEvaluations) * 100)}%`)
+    console.log("\n📝 EVALUACIÓN 2 (verbo to be 2 - 686ec76b3adf8116efceaa22):")
+    console.log("   🔄 Intento 1: 92/100 ✅ APROBADO (ÚNICO)")
+    console.log("   💡 Puntos que deben contar: 92")
 
-    console.log("\n📊 Datos de ejemplo creados exitosamente")
+    console.log("\n📝 EVALUACIÓN 3 (presente simple - 686ec8a29e306911deeba8b4):")
+    console.log("   🔄 Intento 1: 80/100 ✅ APROBADO (ÚLTIMO APROBADO)")
+    console.log("   🔄 Intento 2: 55/100 ❌ NO APROBADO")
+    console.log("   💡 Puntos que deben contar: 80 (último intento aprobado)")
+
+    console.log("\n📝 EVALUACIÓN 4 (Presente Simple - 686ec8c99e306911deeba8bb):")
+    console.log("   🔄 Intento 1: 45/100 ❌ NO APROBADO")
+    console.log("   💡 Puntos que deben contar: 0 (nunca aprobada)")
+
+    console.log("\n" + "=".repeat(70))
+    console.log("🎯 RESULTADO ESPERADO")
+    console.log("=".repeat(70))
+    console.log("📊 Total de intentos registrados: 7")
+    console.log("📊 Evaluaciones únicas aprobadas: 3 de 4")
+    console.log("📊 Puntos Totales Obtenidos: 85 + 92 + 80 = 257 puntos")
+    console.log("📊 Promedio por evaluación aprobada: 85.7 puntos")
+
+    console.log("\n✅ Datos creados para probar el cálculo correcto de puntos")
+    console.log("🔍 Verifica que en la aplicación muestre:")
+    console.log("   - Evaluaciones Aprobadas: 3/4")
+    console.log("   - Puntos Totales Obtenidos: 257")
   } catch (error) {
-    console.error("❌ Error creando datos de ejemplo:", error)
+    console.error("❌ Error:", error)
   } finally {
     await mongoose.disconnect()
     console.log("🔌 Desconectado de MongoDB")
   }
 }
 
-// Ejecutar el script
-createSampleProgress()
+createSampleProgressWithMultipleAttempts()
