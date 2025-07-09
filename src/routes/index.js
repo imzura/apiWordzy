@@ -14,6 +14,7 @@ import programRoutes from "./routesProgram.js"
 import courseRoutes from "./routesCourse.js"
 import scaleRoutes from "./scaleRoutes.js"
 import routeApprenticeProgress from "./routeApprenticeProgress.js"
+import fichaLevelAssignmentRoutes from "./fichaLevelAssignmentRoutes.js"
 
 const router = Router()
 
@@ -33,5 +34,7 @@ router.use("/upload/support-material", routesUpload1)
 router.use("/user", routesUser)
 router.use("/course", courseRoutes)
 router.use("/scales", scaleRoutes)
+// Nueva ruta para asignación de niveles
+router.use("/level-assignment", fichaLevelAssignmentRoutes)
 
 export default router

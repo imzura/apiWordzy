@@ -58,6 +58,20 @@ const LevelSchema = new Schema({
     required: true,
     trim: true,
   },
+  completed: {
+    type: Boolean,
+    default: false,
+  },
+  // ✅ Campo actualizado para incluir la nueva validación
+  completionDetails: {
+    hasName: { type: Boolean, default: false },
+    hasThemes: { type: Boolean, default: false },
+    themesSum100: { type: Boolean, default: false }, // ✅ Nueva validación
+    themesValid: { type: Boolean, default: false },
+    activitiesValid: { type: Boolean, default: false },
+    examsValid: { type: Boolean, default: false },
+    materialsValid: { type: Boolean, default: false },
+  },
   topics: {
     type: [TopicSchema],
     default: [],
@@ -94,7 +108,7 @@ const CourseProgrammingSchema = new Schema(
   },
   {
     timestamps: true,
-    collection: "courseProgramings", // Especificar explícitamente el nombre de la colección
+    collection: "courseProgramings",
   },
 )
 

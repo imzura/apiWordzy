@@ -3,6 +3,7 @@ import Program from "../models/program.js"
 import Topic from "../models/topic.js"
 import Evaluation from "../models/evaluation.js"
 import SupportMaterial from "../models/supportMaterial.js"
+import { updateLevelsCompletionStatus } from "../utils/levelValidation.js"
 import mongoose from "mongoose"
 
 export async function getCourseProgramming(req, res) {
@@ -247,19 +248,27 @@ export async function createCourseProgramming(req, res) {
       }
     }
 
+    // ✅ Actualizar el estado de completado de todos los niveles antes de guardar
+    const levelsWithCompletionStatus = updateLevelsCompletionStatus(levels)
+
+    console.log("🔍 Estados de completado calculados:")
+    levelsWithCompletionStatus.forEach((level, index) => {
+      console.log(`Nivel ${index + 1} (${level.name}): ${level.completed ? "Completado" : "Sin completar"}`)
+    })
+
     // Crear programación con fechas procesadas correctamente
     const programmingData = {
       programId,
       startDate: processDate(startDate),
       endDate: processDate(endDate),
       status: status !== undefined ? status : true,
-      levels: levels,
+      levels: levelsWithCompletionStatus,
     }
 
     console.log("💾 Datos finales a guardar:")
     console.log("startDate:", programmingData.startDate)
     console.log("endDate:", programmingData.endDate)
-    console.log("Número de niveles:", levels.length)
+    console.log("Número de niveles:", levelsWithCompletionStatus.length)
 
     const newProgramming = new CourseProgramming(programmingData)
     await newProgramming.save()
@@ -346,11 +355,19 @@ export async function updateCourseProgramming(req, res) {
       return new Date(dateString)
     }
 
+    // ✅ Actualizar el estado de completado de todos los niveles antes de guardar
+    const levelsWithCompletionStatus = updateLevelsCompletionStatus(levels)
+
+    console.log("🔍 Estados de completado actualizados:")
+    levelsWithCompletionStatus.forEach((level, index) => {
+      console.log(`Nivel ${index + 1} (${level.name}): ${level.completed ? "Completado" : "Sin completar"}`)
+    })
+
     existing.programId = programId
     existing.startDate = processDate(startDate)
     existing.endDate = processDate(endDate)
     existing.status = status !== undefined ? status : true
-    existing.levels = levels
+    existing.levels = levelsWithCompletionStatus
 
     await existing.save()
 
