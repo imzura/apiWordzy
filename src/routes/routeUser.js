@@ -6,8 +6,6 @@ import {
   createUser,
   updateUser,
   deleteUser,
-  updateProgress,
-  updatePoints,
   addFichaToInstructor,
   removeFichaFromInstructor,
   getUserStats,
@@ -33,12 +31,6 @@ routesUser.get("/:id", getUserById)
 routesUser.post("/", debugRequest, createUser)
 routesUser.put("/:id", debugRequest, updateUser)
 routesUser.delete("/:id", deleteUser)
-
-// Ruta específica para actualizar progreso de aprendices
-routesUser.patch("/:id/progress", debugRequest, updateProgress)
-
-// NUEVA RUTA: Actualizar puntos de aprendices
-routesUser.patch("/:id/points", debugRequest, updatePoints)
 
 // Ruta para actualización masiva
 routesUser.patch("/mass-update", debugRequest, massUpdateUsers)

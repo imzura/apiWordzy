@@ -1,24 +1,5 @@
 // #inicio modulos dickson
 import mongoose from "mongoose"
-// Esquema para progreso de niveles de aprendices
-const progresoNivelSchema = new mongoose.Schema(
-  {
-    nivel: {
-      type: Number,
-      required: true,
-      min: 1,
-      max: 3,
-    },
-    porcentaje: {
-      type: Number,
-      required: true,
-      min: 0,
-      max: 100,
-      default: 0,
-    },
-  },
-  { _id: false },
-)
 
 // Esquema principal de usuario unificado
 const userSchema = new mongoose.Schema(
@@ -68,7 +49,7 @@ const userSchema = new mongoose.Schema(
       required: true,
       lowercase: true,
       trim: true,
-      match: /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+      match: [/^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/, "Email inválido"],
     },
     contraseña: {
       type: String,
@@ -80,7 +61,7 @@ const userSchema = new mongoose.Schema(
       required: true,
     },
 
-    // Campos específicos para APRENDICES
+    // --- CAMPOS DE APRENDIZ MODIFICADOS ---
     ficha: [
       {
         type: Number,
@@ -94,19 +75,12 @@ const userSchema = new mongoose.Schema(
       type: String,
       trim: true,
     },
+    // CAMBIO: Se mantiene para el cálculo general que hará el servicio.
     progresoActual: {
       type: Number,
       default: 0,
       min: 0,
       max: 100,
-    },
-    progresoNiveles: {
-      type: [progresoNivelSchema],
-      default: () => [
-        { nivel: 1, porcentaje: 0 },
-        { nivel: 2, porcentaje: 0 },
-        { nivel: 3, porcentaje: 0 },
-      ],
     },
     puntos: {
       type: Number,
@@ -117,8 +91,9 @@ const userSchema = new mongoose.Schema(
         message: "Los puntos deben ser un número entero",
       },
     },
+    // ELIMINADO: El campo `nivel` y `progresoNiveles` ya no están embebidos.
 
-    // Campos específicos para INSTRUCTORES
+    // --- CAMPOS DE INSTRUCTOR ---
     fichas: {
       type: [
         {
@@ -132,19 +107,6 @@ const userSchema = new mongoose.Schema(
         }
         return undefined
       },
-      validate: {
-        validator: function (fichas) {
-          // Solo validar si es instructor
-          if (this.tipoUsuario !== "instructor") return true
-
-          // Permitir array vacío
-          if (!fichas || fichas.length === 0) return true
-
-          // Validar que todos sean ObjectIds válidos
-          return fichas.every((ficha) => mongoose.Types.ObjectId.isValid(ficha))
-        },
-        message: "Todas las fichas deben ser IDs válidos de cursos",
-      },
     },
   },
   {
@@ -156,18 +118,13 @@ const userSchema = new mongoose.Schema(
           delete ret.fichas
         } else if (ret.tipoUsuario === "instructor") {
           delete ret.ficha
-          delete ret.nivel
           delete ret.programa
           delete ret.progresoActual
-          delete ret.progresoNiveles
           delete ret.puntos
         } else if (ret.tipoUsuario === "administrador") {
-          // NUEVO: Limpiar campos para administrador
           delete ret.ficha
-          delete ret.nivel
           delete ret.programa
           delete ret.progresoActual
-          delete ret.progresoNiveles
           delete ret.puntos
           delete ret.fichas
         }
@@ -177,14 +134,10 @@ const userSchema = new mongoose.Schema(
   },
 )
 
-// Índices compuestos para optimizar consultas
+// Índices
 userSchema.index({ tipoUsuario: 1, estado: 1 })
 userSchema.index({ tipoUsuario: 1, documento: 1 })
 userSchema.index({ tipoUsuario: 1, ficha: 1 })
-userSchema.index({ tipoUsuario: 1, programa: 1 })
-userSchema.index({ role: 1 })
-userSchema.index({ tipoUsuario: 1, role: 1 })
-userSchema.index({ fichas: 1 }) // Nuevo índice para el campo fichas
 
 // Middleware pre-save para limpiar campos innecesarios
 userSchema.pre("save", function (next) {
@@ -192,66 +145,36 @@ userSchema.pre("save", function (next) {
     this.fichas = undefined
   } else if (this.tipoUsuario === "instructor") {
     this.ficha = undefined
-    this.nivel = undefined
     this.programa = undefined
     this.progresoActual = undefined
-    this.progresoNiveles = undefined
     this.puntos = undefined
   } else if (this.tipoUsuario === "administrador") {
-    // NUEVO: Limpiar campos para administrador
     this.ficha = undefined
-    this.nivel = undefined
     this.programa = undefined
     this.progresoActual = undefined
-    this.progresoNiveles = undefined
     this.puntos = undefined
     this.fichas = undefined
   }
   next()
 })
 
-// En el modelo user.js, agregar middleware pre para populate
-userSchema.pre(["find", "findOne", "findOneAndUpdate"], function () {
-  // Solo poblar fichas para instructores o si no se especifica tipoUsuario
-  if (this.getQuery().tipoUsuario === "instructor" || !this.getQuery().tipoUsuario) {
-    this.populate({
-      path: "fichas",
-      select:
-        "code area fk_programs course_status offer_type start_date end_date status fk_coordination fk_itinerary quarter",
-      match: { status: true }, // Solo fichas activas
-    })
-  }
-})
-
-// Middleware para findById
-userSchema.pre("findById", function () {
-  this.populate({
-    path: "fichas",
-    select:
-      "code area fk_programs course_status offer_type start_date end_date status fk_coordination fk_itinerary quarter",
-  })
-})
-
 // Método para obtener datos limpios según el tipo
 userSchema.methods.toCleanJSON = function () {
   const obj = this.toObject()
+  // CAMBIO: Se añade el campo `progresoNiveles` que se calculará dinámicamente
+  if (this.progresoNiveles) {
+    obj.progresoNiveles = this.progresoNiveles
+  }
 
   if (this.tipoUsuario === "aprendiz") {
     delete obj.fichas
   } else if (this.tipoUsuario === "instructor") {
     delete obj.ficha
-    delete obj.nivel
     delete obj.programa
-    delete obj.progresoActual
-    delete obj.progresoNiveles
     delete obj.puntos
   } else if (this.tipoUsuario === "administrador") {
-    // NUEVO: Limpiar campos para administrador
     delete obj.ficha
-    delete obj.nivel
     delete obj.programa
-    delete obj.progresoActual
-    delete obj.progresoNiveles
     delete obj.puntos
     delete obj.fichas
   }
