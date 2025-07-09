@@ -1,8 +1,4 @@
-import mongoose, { model, Schema } from "mongoose";
-import Topic from "./topic.js";
-import Program from "./program.js";
-import SupportMaterial from "./supportMaterial.js";
-import Evaluation from "./evaluation.js";
+import mongoose, { model, Schema } from "mongoose"
 
 const SupportMaterialSchema = new Schema({
   materialId: {
@@ -10,7 +6,7 @@ const SupportMaterialSchema = new Schema({
     ref: "SupportMaterial",
     required: true,
   },
-});
+})
 
 const evaluationSchema = new Schema({
   evaluationId: {
@@ -21,8 +17,10 @@ const evaluationSchema = new Schema({
   value: {
     type: Number,
     required: true,
+    min: 0,
+    max: 100,
   },
-});
+})
 
 const TopicSchema = new Schema({
   topicId: {
@@ -38,21 +36,33 @@ const TopicSchema = new Schema({
     type: Number,
     required: true,
     min: 0,
+    max: 100,
   },
-  activities: [evaluationSchema],
-  exams: [evaluationSchema],
-  materials: [SupportMaterialSchema],
-});
+  activities: {
+    type: [evaluationSchema],
+    default: [],
+  },
+  exams: {
+    type: [evaluationSchema],
+    default: [],
+  },
+  materials: {
+    type: [SupportMaterialSchema],
+    default: [],
+  },
+})
 
 const LevelSchema = new Schema({
   name: {
     type: String,
     required: true,
+    trim: true,
   },
   topics: {
     type: [TopicSchema],
+    default: [],
   },
-});
+})
 
 const CourseProgrammingSchema = new Schema(
   {
@@ -76,15 +86,16 @@ const CourseProgrammingSchema = new Schema(
     levels: {
       type: [LevelSchema],
       validate: {
-        validator: function (levels) {
-          return levels.length >= 3;
-        },
-        message: "Debe haber al menos 3 niveles.",
+        validator: (levels) => Array.isArray(levels) && levels.length >= 3 && levels.length <= 6,
+        message: "Debe haber entre 3 y 6 niveles.",
       },
+      default: [],
     },
   },
-  { timestamps: true }
-);
+  {
+    timestamps: true,
+    collection: "courseProgramings", // Especificar explícitamente el nombre de la colección
+  },
+)
 
-export default mongoose.models.CourseProgramming ||
-  model("CourseProgramming", CourseProgrammingSchema, "courseProgramings");
+export default mongoose.models.CourseProgramming || model("CourseProgramming", CourseProgrammingSchema)
