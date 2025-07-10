@@ -14,7 +14,7 @@ const PermissionSchema = new Schema({
       'Material De Apoyo',
       'Evaluaciones',
       'Programacion De Cursos',
-      'Escala De Valoracion',
+      'Asignación de Niveles',
       'Insignias',
       'Cursos Programados',
       'Ranking',

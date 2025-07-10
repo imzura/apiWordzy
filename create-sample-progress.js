@@ -18,10 +18,10 @@ async function createSampleProgressWithMultipleAttempts() {
 
       // Primer intento - NO APROBADO (no debe contar para puntos)
       {
-        apprenticeId: new mongoose.Types.ObjectId("686ec3123adf8116efcea6ea"),
-        courseId: new mongoose.Types.ObjectId("686ec6673adf8116efcea8f4"),
-        courseProgrammingId: new mongoose.Types.ObjectId("686ec7ab3adf8116efceaa32"),
-        evaluationId: new mongoose.Types.ObjectId("686ec7493adf8116efceaa1d"), // verbo to be
+        apprenticeId: new mongoose.Types.ObjectId("686f3b492b8e71c51f8fbba8"),
+        courseId: new mongoose.Types.ObjectId("686f3af0349d81be334d7388"),
+        courseProgrammingId: new mongoose.Types.ObjectId("686f3daa2b8e71c51f8fbc7d"),
+        evaluationId: new mongoose.Types.ObjectId("686f3d302b8e71c51f8fbc45"), // verbo to be
         level: 1,
         score: 45,
         maxScore: 100,
@@ -39,10 +39,10 @@ async function createSampleProgressWithMultipleAttempts() {
 
       // Segundo intento - APROBADO (70 puntos - debe contar)
       {
-        apprenticeId: new mongoose.Types.ObjectId("686ec3123adf8116efcea6ea"),
-        courseId: new mongoose.Types.ObjectId("686ec6673adf8116efcea8f4"),
-        courseProgrammingId: new mongoose.Types.ObjectId("686ec7ab3adf8116efceaa32"),
-        evaluationId: new mongoose.Types.ObjectId("686ec7493adf8116efceaa1d"), // verbo to be
+        apprenticeId: new mongoose.Types.ObjectId("686f3b492b8e71c51f8fbba8"),
+        courseId: new mongoose.Types.ObjectId("686f3af0349d81be334d7388"),
+        courseProgrammingId: new mongoose.Types.ObjectId("686f3daa2b8e71c51f8fbc7d"),
+        evaluationId: new mongoose.Types.ObjectId("686f3d302b8e71c51f8fbc45"), // verbo to be
         level: 1,
         score: 70,
         maxScore: 100,
@@ -60,10 +60,10 @@ async function createSampleProgressWithMultipleAttempts() {
 
       // Tercer intento - APROBADO (85 puntos - este debe contar, no el anterior)
       {
-        apprenticeId: new mongoose.Types.ObjectId("686ec3123adf8116efcea6ea"),
-        courseId: new mongoose.Types.ObjectId("686ec6673adf8116efcea8f4"),
-        courseProgrammingId: new mongoose.Types.ObjectId("686ec7ab3adf8116efceaa32"),
-        evaluationId: new mongoose.Types.ObjectId("686ec7493adf8116efceaa1d"), // verbo to be
+        apprenticeId: new mongoose.Types.ObjectId("686f3b492b8e71c51f8fbba8"),
+        courseId: new mongoose.Types.ObjectId("686f3af0349d81be334d7388"),
+        courseProgrammingId: new mongoose.Types.ObjectId("686f3daa2b8e71c51f8fbc7d"),
+        evaluationId: new mongoose.Types.ObjectId("686f3d302b8e71c51f8fbc45"), // verbo to be
         level: 1,
         score: 85,
         maxScore: 100,
@@ -84,10 +84,10 @@ async function createSampleProgressWithMultipleAttempts() {
       // ==========================================
 
       {
-        apprenticeId: new mongoose.Types.ObjectId("686ec3123adf8116efcea6ea"),
-        courseId: new mongoose.Types.ObjectId("686ec6673adf8116efcea8f4"),
-        courseProgrammingId: new mongoose.Types.ObjectId("686ec7ab3adf8116efceaa32"),
-        evaluationId: new mongoose.Types.ObjectId("686ec76b3adf8116efceaa22"), // verbo to be 2
+        apprenticeId: new mongoose.Types.ObjectId("686f3b492b8e71c51f8fbba8"),
+        courseId: new mongoose.Types.ObjectId("686f3af0349d81be334d7388"),
+        courseProgrammingId: new mongoose.Types.ObjectId("686f3daa2b8e71c51f8fbc7d"),
+        evaluationId: new mongoose.Types.ObjectId("686f3d402b8e71c51f8fbc4a"), // verbo to be 2
         level: 1,
         score: 92,
         maxScore: 100,
@@ -109,10 +109,10 @@ async function createSampleProgressWithMultipleAttempts() {
 
       // Primer intento - APROBADO (80 puntos - debe contar porque es el último aprobado)
       {
-        apprenticeId: new mongoose.Types.ObjectId("686ec3123adf8116efcea6ea"),
-        courseId: new mongoose.Types.ObjectId("686ec6673adf8116efcea8f4"),
-        courseProgrammingId: new mongoose.Types.ObjectId("686ec7ab3adf8116efceaa32"),
-        evaluationId: new mongoose.Types.ObjectId("686ec8a29e306911deeba8b4"), // presente simple
+        apprenticeId: new mongoose.Types.ObjectId("686f3b492b8e71c51f8fbba8"),
+        courseId: new mongoose.Types.ObjectId("686f3af0349d81be334d7388"),
+        courseProgrammingId: new mongoose.Types.ObjectId("686f3daa2b8e71c51f8fbc7d"),
+        evaluationId: new mongoose.Types.ObjectId("686f3d822b8e71c51f8fbc62"), // presente simple
         level: 1,
         score: 80,
         maxScore: 100,
@@ -130,10 +130,10 @@ async function createSampleProgressWithMultipleAttempts() {
 
       // Segundo intento - NO APROBADO (no debe afectar el conteo de puntos)
       {
-        apprenticeId: new mongoose.Types.ObjectId("686ec3123adf8116efcea6ea"),
-        courseId: new mongoose.Types.ObjectId("686ec6673adf8116efcea8f4"),
-        courseProgrammingId: new mongoose.Types.ObjectId("686ec7ab3adf8116efceaa32"),
-        evaluationId: new mongoose.Types.ObjectId("686ec8a29e306911deeba8b4"), // presente simple
+        apprenticeId: new mongoose.Types.ObjectId("686f3b492b8e71c51f8fbba8"),
+        courseId: new mongoose.Types.ObjectId("686f3af0349d81be334d7388"),
+        courseProgrammingId: new mongoose.Types.ObjectId("686f3daa2b8e71c51f8fbc7d"),
+        evaluationId: new mongoose.Types.ObjectId("686f3d822b8e71c51f8fbc62"), // presente simple
         level: 1,
         score: 55,
         maxScore: 100,
@@ -154,10 +154,10 @@ async function createSampleProgressWithMultipleAttempts() {
       // ==========================================
 
       {
-        apprenticeId: new mongoose.Types.ObjectId("686ec3123adf8116efcea6ea"),
-        courseId: new mongoose.Types.ObjectId("686ec6673adf8116efcea8f4"),
-        courseProgrammingId: new mongoose.Types.ObjectId("686ec7ab3adf8116efceaa32"),
-        evaluationId: new mongoose.Types.ObjectId("686ec8c99e306911deeba8bb"), // Presente Simple
+        apprenticeId: new mongoose.Types.ObjectId("686f3b492b8e71c51f8fbba8"),
+        courseId: new mongoose.Types.ObjectId("686f3af0349d81be334d7388"),
+        courseProgrammingId: new mongoose.Types.ObjectId("686f3daa2b8e71c51f8fbc7d"),
+        evaluationId: new mongoose.Types.ObjectId("686f3d982b8e71c51f8fbc69"), // Presente Simple
         level: 1,
         score: 45,
         maxScore: 100,
@@ -176,7 +176,7 @@ async function createSampleProgressWithMultipleAttempts() {
 
     // Limpiar datos existentes
     await ApprenticeProgress.deleteMany({
-      apprenticeId: new mongoose.Types.ObjectId("686ec3123adf8116efcea6ea"),
+      apprenticeId: new mongoose.Types.ObjectId("686f3b492b8e71c51f8fbba8"),
       level: 1,
     })
     console.log("🗑️ Datos anteriores eliminados")
